@@ -51,20 +51,30 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 
 
 
+	//The following stuff is used in the game logic coroutine.
 
 	private Vector2i? clickedPiece = null;
 
 	private List<Board.Move> movements = null;
 	private int clickedMove = -1;
 
+	private bool isGameOver = false;
+	/// <summary>
+	/// Ends the game. The winner is whoever's turn it currently is.
+	/// </summary>
+	public void EndGame() { isGameOver = true; }
+
+
 	private System.Collections.IEnumerator GameLogicCoroutine()
 	{
-		//Will be flipped to "false" at the beginning of the main game loop.
-		IsAttackersTurn = true;
-
 		yield return null;
 
-		//Set up piece click responders.
+		//Will be flipped to "false" at the beginning of the main game loop.
+		IsAttackersTurn = true;
+		
+		yield return null;
+
+		//Set up piece click responders for when the player is selecting a piece to move.
 		foreach (Vector2i pos in Board.Instance.GetPieces(Board.Spaces.Defender))
 			AddPieceDelegate(pos, Board.Instance.GetPiece(pos), false);
 		foreach (Vector2i pos in Board.Instance.GetPieces(Board.Spaces.King))
@@ -72,23 +82,31 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 		foreach (Vector2i pos in Board.Instance.GetPieces(Board.Spaces.Attacker))
 			AddPieceDelegate(pos, Board.Instance.GetPiece(pos), true);
 
-		//Set up movement click responders.
+		//Set up movement click responder, for when the player is selecting a position to move to.
 		SpriteSelector.Instance.Objects.Add(BoardSprite, (r, p) =>
 			{
-				if (movements != null)
+				if (movements != null && clickedMove == -1)
 				{
+					//Get the board position that was clicked on.
 					Vector2i pI = new Vector2i((int)p.x, (int)p.y);
 					pI.x = Mathf.Clamp(pI.x, 0, Board.BoardSize - 1);
 					pI.y = Mathf.Clamp(pI.y, 0, Board.BoardSize - 1);
 
-					for (int i = 0; i < movements.Count; ++i)
+					//If this position is a valid movement, use it.
+					if (pI != clickedPiece.Value)
 					{
-						if (movements[i].Pos == pI)
+						for (int i = 0; i < movements.Count; ++i)
 						{
-							clickedMove = i;
-							return true;
+							if (movements[i].Pos == pI)
+							{
+								clickedMove = i;
+								return true;
+							}
 						}
 					}
+
+					//Was not a valid place to move, so deselect the current piece.
+					clickedPiece = null;
 				}
 
 				return false;
@@ -96,6 +114,7 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 
 
 		//Run the main game loop.
+		List<Transform> moveSprites;
 		while (true)
 		{
 			//Reset game state.
@@ -106,21 +125,76 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 
 			yield return new WaitForSeconds(0.5f);
 
+		WaitForClickedPiece:
+
 			//Wait for a piece to be clicked on.
 			while (!clickedPiece.HasValue)
 				yield return null;
 
-			//TODO: Highlight the piece and movement opportunities. Create a list of movement sprites to be enabled at will.
+			//Show the player all possible movements for his piece.
+			movements = Board.Instance.GetAllowedMoves(clickedPiece.Value);
+			moveSprites = Fitchneil_MovementSprites.Instance.AllocateSprites(movements);
+
 
 			//Wait for a movement option to be clicked on.
 			while (clickedMove == -1)
+			{
+				//If the clicked piece became de-selected,
+				//    go back and wait for another piece to be selected.
+				if (!clickedPiece.HasValue)
+				{
+					Fitchneil_MovementSprites.Instance.DeallocateSprites(moveSprites);
+					movements = null;
+					goto WaitForClickedPiece;
+				}
+
 				yield return null;
+			}
 
-			//TODO: Animate the movement.
+			Fitchneil_MovementSprites.Instance.DeallocateSprites(moveSprites);
 
-			yield return new WaitForSeconds(2.0f);
+			//Get whether this is a game-ending move.
+			if (IsAttackersTurn)
+			{
+				//The attackers win if they capture the king.
+				foreach (Vector2i p in Board.Instance.GetCapturesFromMove(clickedPiece.Value,
+																		  movements[clickedMove].Pos))
+				{
+					if (Board.Instance.Board[p.x, p.y] == Board.Spaces.King)
+					{
+						EndGame();
+						break;
+					}
+				}
+			}
+			else
+			{
+				//The defenders win if the king escapes.
+				Vector2i pieceP = clickedPiece.Value,
+						 moveP = movements[clickedMove].Pos;
+				if (Board.Instance.Board[pieceP.x, pieceP.y] == Board.Spaces.King &&
+					(moveP.x == 0 || moveP.y == 0 ||
+					 moveP.x == Board.BoardSize - 1 || moveP.y == Board.BoardSize - 1))
+				{
+					EndGame();
+				}
 
-			//TODO: Calculate new state.
+				//TODO: Also end the game if no attackers are left after this move is done.
+			}
+
+			//Move the piece to the new position.
+			bool doneMoving = false;
+			Board.Instance.MovePiece(clickedPiece.Value, movements[clickedMove].Pos,
+									 (t) => { doneMoving = true; });
+			while (!doneMoving)
+				yield return null;
+			
+			//See if the game just ended.
+			if (isGameOver)
+			{
+				//TODO: Do game-ending stuff.
+				Debug.Log("Game Over!");
+			}
 
 			yield return null;
 		}

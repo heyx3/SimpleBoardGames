@@ -18,10 +18,16 @@ public class SpriteSelector : Singleton<SpriteSelector>
 
 	/// <summary>
 	/// All objects currently being tracked for clicks/taps.
+	/// NOTE: Make sure to remove destroyed objects from this collection! It won't happen automatically.
 	/// </summary>
 	public Dictionary<SpriteRenderer, ClickedEventDelegate> Objects;
 
 
+	protected override void Awake()
+	{
+		base.Awake();
+		Objects = new Dictionary<SpriteRenderer, ClickedEventDelegate>();
+	}
 	void Update()
 	{
 		//Get taps/mouse clicks and see if any sprites were clicked on.

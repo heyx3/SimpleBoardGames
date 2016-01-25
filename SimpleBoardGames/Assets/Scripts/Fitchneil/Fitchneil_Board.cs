@@ -14,7 +14,7 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 	}
 	public static bool IsSameTeam(Spaces a, Spaces b)
 	{
-		return ((a == Spaces.King || a == Spaces.Defender) && (b == Spaces.King || a == Spaces.Defender)) ||
+		return ((a == Spaces.King || a == Spaces.Defender) && (b == Spaces.King || b == Spaces.Defender)) ||
 			   (a == Spaces.Attacker && b == Spaces.Attacker);
 	}
 	public static bool IsEnemies(Spaces a, Spaces b)
@@ -27,6 +27,8 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 	public static readonly int BoardSize = 7;
 
 	public Spaces[,] Board;
+	private Spaces[,] tempBoard;
+
 	private SpriteRenderer[,] boardPieces;
 
 
@@ -67,7 +69,7 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 			int x = piece.x + 1;
 			while (x < BoardSize)
 			{
-				if (TryMove(pType, new Vector2i(x, piece.y), moves))
+				if (TryMove(pType, piece, new Vector2i(x, piece.y), moves))
 					break;
 				x += 1;
 			}
@@ -75,7 +77,7 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 			x = piece.x - 1;
 			while (x >= 0)
 			{
-				if (TryMove(pType, new Vector2i(x, piece.y), moves))
+				if (TryMove(pType, piece, new Vector2i(x, piece.y), moves))
 					break;
 				x -= 1;
 			}
@@ -83,7 +85,7 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 			int y = piece.y + 1;
 			while (y < BoardSize)
 			{
-				if (TryMove(pType, new Vector2i(piece.x, y), moves))
+				if (TryMove(pType, piece, new Vector2i(piece.x, y), moves))
 					break;
 				y += 1;
 			}
@@ -91,7 +93,7 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 			y = piece.y - 1;
 			while (y >= 0)
 			{
-				if (TryMove(pType, new Vector2i(piece.x, y), moves))
+				if (TryMove(pType, piece, new Vector2i(piece.x, y), moves))
 					break;
 				y -= 1;
 			}
@@ -99,47 +101,122 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 			return moves;
 		}
 	}
-	private bool TryMove(Spaces pType, Vector2i tryPos, List<Move> moves)
+	private bool TryMove(Spaces pType, Vector2i fromPos, Vector2i tryPos, List<Move> moves)
 	{
+		UnityEngine.Assertions.Assert.IsTrue(pType != Spaces.Empty, "Piece is type 'Empty'");
+
+		//If something is already there, no moves are allowed and the movement is blocked.
 		Spaces pType2 = Board[tryPos.x, tryPos.y];
-		if (IsSameTeam(pType, pType2))
+		if (pType2 != Spaces.Empty)
 		{
 			return true;
 		}
-		else if (IsEnemies(pType, pType2))
-		{
-			Move mv = new Move();
-			mv.Pos = tryPos;
-			mv.IsSpecial = true;
-			moves.Add(mv);
 
-			return true;
-		}
-		else if (pType == Spaces.King &&
-				 (tryPos.x == 0 || tryPos.x == BoardSize - 1 ||
-				  tryPos.y == 0 || tryPos.y == BoardSize - 1))
+		//If this piece isn't a king and this is the throne square,
+		//    no moves are allowed but the movement isn't blocked.
+		if (pType != Spaces.King && tryPos.x == (BoardSize / 2) && tryPos.y == (BoardSize / 2))
 		{
-			Move mv = new Move();
-			mv.Pos = tryPos;
-			mv.IsSpecial = true;
-			moves.Add(mv);
-
 			return false;
 		}
-		else
-		{
-			Move mv = new Move();
-			mv.Pos = tryPos;
-			mv.IsSpecial = false;
-			moves.Add(mv);
 
-			return false;
+
+		//Otherwise, it's a valid move.
+
+		Move mv = new Move();
+		mv.Pos = tryPos;
+
+		//The move is special if it's a winning move for the King piece or if it captures another piece.
+		mv.IsSpecial = (pType == Spaces.King &&
+						   (tryPos.x == 0 || tryPos.x == BoardSize - 1 ||
+							tryPos.y == 0 || tryPos.y == BoardSize - 1)) ||
+					   GetCapturesFromMove(fromPos, tryPos).Count > 0;
+		moves.Add(mv);
+
+		return false;
+	}
+
+	/// <summary>
+	/// Gets all pieces that will be captured by moving the given piece to the given position.
+	/// </summary>
+	public List<Vector2i> GetCapturesFromMove(Vector2i currentPos, Vector2i nextPos)
+	{
+		Spaces pType = Board[currentPos.x, currentPos.y];
+
+		//Create a copy of the board with the move completed.
+		Array.Copy(Board, tempBoard, Board.Length);
+		tempBoard[currentPos.x, currentPos.y] = Spaces.Empty;
+		tempBoard[nextPos.x, nextPos.y] = pType;
+
+		//See if any normal (i.e. non-king) enemies were captured.
+		Spaces normalEnemy = (pType == Spaces.Attacker ? Spaces.Defender : Spaces.Attacker);
+		List<Vector2i> caps = new List<Vector2i>();
+		if (nextPos.x > 1 &&
+			tempBoard[nextPos.x - 1, nextPos.y] == normalEnemy &&
+			IsSameTeam(pType, tempBoard[nextPos.x - 2, nextPos.y]))
+		{
+			caps.Add(nextPos.LessX);
 		}
+		if (nextPos.x < BoardSize - 2 &&
+			tempBoard[nextPos.x + 1, nextPos.y] == normalEnemy &&
+			IsSameTeam(pType, tempBoard[nextPos.x + 2, nextPos.y]))
+		{
+			caps.Add(nextPos.MoreX);
+		}
+		if (nextPos.y > 1 &&
+			tempBoard[nextPos.x, nextPos.y - 1] == normalEnemy &&
+			IsSameTeam(pType, tempBoard[nextPos.x, nextPos.y - 2]))
+		{
+			caps.Add(nextPos.LessY);
+		}
+		if (nextPos.y < BoardSize - 2 &&
+			tempBoard[nextPos.x, nextPos.y + 1] == normalEnemy &&
+			IsSameTeam(pType, tempBoard[nextPos.x, nextPos.y + 2]))
+		{
+			caps.Add(nextPos.MoreY);
+		}
+
+		//See if the King was captured.
+		if (pType == Spaces.Attacker)
+		{
+			//Only check if the king was right next to this piece.
+			Vector2i kingPos = new Vector2i(-1, -1);
+
+			if (nextPos.x > 0 && tempBoard[nextPos.x - 1, nextPos.y] == Spaces.King)
+				kingPos = nextPos.LessX;
+			if (nextPos.y > 0 && tempBoard[nextPos.x, nextPos.y - 1] == Spaces.King)
+				kingPos = nextPos.LessY;
+			if (nextPos.x < BoardSize - 1 && tempBoard[nextPos.x + 1, nextPos.y] == Spaces.King)
+				kingPos = nextPos.MoreX;
+			if (nextPos.y < BoardSize - 1 && tempBoard[nextPos.x, nextPos.y + 1] == Spaces.King)
+				kingPos = nextPos.MoreY;
+
+			if (kingPos != new Vector2i(-1, -1))
+			{
+				//The king must be surrounded by attackers/the throne to be captured.
+				if (kingPos.x > 0 && IsAttackerOrThrone_temp(kingPos.LessX) &&
+					kingPos.x < BoardSize - 1 && IsAttackerOrThrone_temp(kingPos.MoreX) &&
+					kingPos.y > 0 && IsAttackerOrThrone_temp(kingPos.LessY) &&
+					kingPos.y < BoardSize - 1 && IsAttackerOrThrone_temp(kingPos.MoreY))
+				{
+					caps.Add(kingPos);
+				}
+			}
+		}
+
+		return caps;
+	}
+	private bool IsAttackerOrThrone_temp(Vector2i pos)
+	{
+		return tempBoard[pos.x, pos.y] == Spaces.Attacker ||
+			   (pos.x == (BoardSize / 2) && pos.y == (BoardSize / 2));
 	}
 
 	public Transform MovePiece(Vector2i current, Vector2i next,
 							   MoveToPosition.MoveFinishedDelegate onFinished = null)
 	{
+		List<Vector2i> captures = GetCapturesFromMove(current, next);
+
+
 		SpriteRenderer sprR = GetPiece(current);
 		UnityEngine.Assertions.Assert.IsNotNull(sprR);
 
@@ -155,6 +232,23 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 		Board[next.x, next.y] = Board[current.x, current.y];
 		Board[current.x, current.y] = Spaces.Empty;
 
+		//Destroy all captured pieces.
+		foreach (Vector2i v in captures)
+		{
+			//Spawn some effects.
+			GameObject dpGO = Instantiate(Fitchneil_Art.Instance.DestroyedPieceEffectPrefab);
+			dpGO.transform.position = new Vector3(v.x + 0.5f, v.y + 0.5f, 0.0f);
+
+			//Destroy the piece.
+			Board[v.x, v.y] = Spaces.Empty;
+			SpriteSelector.Instance.Objects.Remove(boardPieces[v.x, v.y]);
+			Destroy(boardPieces[v.x, v.y]);
+			boardPieces[v.x, v.y] = null;
+		}
+
+		boardPieces[next.x, next.y] = boardPieces[current.x, current.y];
+		boardPieces[current.x, current.y] = null;
+
 		return go.transform;
 	}
 
@@ -163,19 +257,21 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 	{
 		base.Awake();
 
-
 		Board = new Spaces[BoardSize, BoardSize];
+		tempBoard = new Spaces[BoardSize, BoardSize];
 		
 		boardPieces = new SpriteRenderer[BoardSize, BoardSize];
 		for (int x = 0; x < Board.GetLength(0); ++x)
 		{
 			for (int y = 0; y < Board.GetLength(1); ++y)
 			{
+				Board[x, y] = Spaces.Empty;
 				boardPieces[x, y] = null;
 			}
 		}
-		
-
+	}
+	void Start()
+	{
 		//Set up specific pieces.
 		int centerPos = (BoardSize / 2);
 
@@ -205,22 +301,21 @@ public class Fitchneil_Board : Singleton<Fitchneil_Board>
 	{
 		Board[pos.x, pos.y] = type;
 
+		Vector3 worldPos = new Vector3(pos.x + 0.5f, pos.y + 0.5f, 0.0f);
+
 		switch (type)
 		{
 			case Spaces.King:
 				boardPieces[pos.x, pos.y] = Utilities.CreateSprite(Fitchneil_Art.Instance.King,
-																   "King Piece",
-																   new Vector3(pos.x, pos.y, 0.0f));
+																   "King Piece", worldPos);
 				break;
 			case Spaces.Defender:
 				boardPieces[pos.x, pos.y] = Utilities.CreateSprite(Fitchneil_Art.Instance.Defender,
-																   "Defender Piece",
-																   new Vector3(pos.x, pos.y, 0.0f));
+																   "Defender Piece", worldPos);
 				break;
 			case Spaces.Attacker:
 				boardPieces[pos.x, pos.y] = Utilities.CreateSprite(Fitchneil_Art.Instance.Attacker,
-																   "Attacker Piece",
-																   new Vector3(pos.x, pos.y, 0.0f));
+																   "Attacker Piece", worldPos);
 				break;
 
 			case Spaces.Empty:

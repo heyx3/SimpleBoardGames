@@ -1,6 +1,6 @@
 fileFormatVersion: 2
 guid: d4a2e8cc71613ed4598c53d2b07cc09c
-timeCreated: 1453707990
+timeCreated: 1453755495
 licenseType: Free
 TextureImporter:
   fileIDToRecycleName:
@@ -8,6 +8,7 @@ TextureImporter:
     21300002: Defender Piece
     21300004: Attacker Piece
     21300006: Move Option
+    21300008: Throne Marker
   serializedVersion: 2
   mipmaps:
     mipMapMode: 0
@@ -132,10 +133,21 @@ TextureImporter:
         - {x: -128, y: -128}
         - {x: 128, y: -128}
         - {x: 128, y: 128}
-      - - {x: -117, y: 117}
-        - {x: 117, y: 117}
-        - {x: 117, y: -117}
-        - {x: -117, y: -117}
+    - name: Throne Marker
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 256
+        height: 256
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline:
+      - - {x: -128, y: 128}
+        - {x: -128, y: -128}
+        - {x: 128, y: -128}
+        - {x: 128, y: 128}
     outline: []
   spritePackingTag: 
   userData: 
