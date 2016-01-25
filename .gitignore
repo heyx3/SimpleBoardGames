@@ -49,6 +49,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+# Temp directories
+SimpleBoardGames/Library
+SimpleBoardGames/Temp/
+
+
 # Windows
 # =========================
 
