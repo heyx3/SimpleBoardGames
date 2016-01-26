@@ -15,4 +15,10 @@ public abstract class Singleton<T> : MonoBehaviour where T : Singleton<T>
 		UnityEngine.Assertions.Assert.IsNull(Instance, "There are two instances of " + this.GetType());
 		Instance = (T)this;
 	}
+	protected virtual void OnDestroy()
+	{
+		UnityEngine.Assertions.Assert.AreEqual(this, Instance,
+											   "There is a different instance of " + this.GetType());
+		Instance = null;
+	}
 }

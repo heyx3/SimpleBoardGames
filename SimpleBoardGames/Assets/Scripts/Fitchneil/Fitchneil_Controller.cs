@@ -10,25 +10,26 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 	public SpriteRenderer AttackersText, DefendersText;
 	public SpriteRenderer BoardSprite;
 
-	private Color attackersTextCol, defendersTextCol;
+	public GameObject AttackersWinStuff, DefendersWinStuff;
+
 
 	public bool IsAttackersTurn
 	{
 		get { return isAttackersTurn; }
 		private set
 		{
-			if (value)
+			if (value && !isAttackersTurn)
 			{
-				AttackersText.color = Fitchneil_Art.Instance.GreyTextColor;
-				DefendersText.color = defendersTextCol;
+				isAttackersTurn = true;
+				AttackersText.color /= Fitchneil_Art.Instance.MyTurnMultiplier;
+				DefendersText.color *= Fitchneil_Art.Instance.MyTurnMultiplier;
 			}
-			else
+			else if (!value && isAttackersTurn)
 			{
-				AttackersText.color = attackersTextCol;
-				DefendersText.color = Fitchneil_Art.Instance.GreyTextColor;
+				isAttackersTurn = false;
+				AttackersText.color *= Fitchneil_Art.Instance.MyTurnMultiplier;
+				DefendersText.color /= Fitchneil_Art.Instance.MyTurnMultiplier;
 			}
-
-			isAttackersTurn = value;
 		}
 	}
 	private bool isAttackersTurn;
@@ -37,21 +38,28 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 	protected override void Awake()
 	{
 		base.Awake();
-
-		attackersTextCol = AttackersText.color;
-		defendersTextCol = DefendersText.color;
 	}
 
 	void Start()
 	{
 		Screen.orientation = ScreenOrientation.Landscape;
+		
+		isAttackersTurn = false;
+		AttackersText.color *= Fitchneil_Art.Instance.MyTurnMultiplier;
 
 		StartCoroutine(GameLogicCoroutine());
+	}
+	void Update()
+	{
+		if (Input.GetKeyDown(KeyCode.Escape))
+		{
+			UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+		}
 	}
 
 
 
-	//The following stuff is used in the game logic coroutine.
+	//The following stuff is all part of the game logic coroutine.
 
 	private Vector2i? clickedPiece = null;
 
@@ -59,11 +67,27 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 	private int clickedMove = -1;
 
 	private bool isGameOver = false;
+
 	/// <summary>
 	/// Ends the game. The winner is whoever's turn it currently is.
 	/// </summary>
 	public void EndGame() { isGameOver = true; }
 
+	private void AddPieceDelegate(Vector2i pos, SpriteRenderer spr, bool isAttacker)
+	{
+		SpriteSelector.Instance.Objects.Add(spr, (r, p) =>
+			{
+				if (movements == null && !clickedPiece.HasValue && IsAttackersTurn == isAttacker)
+				{
+					clickedPiece = new Vector2i((int)p.x, (int)p.y);
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			});
+	}
 
 	private System.Collections.IEnumerator GameLogicCoroutine()
 	{
@@ -192,23 +216,21 @@ public class Fitchneil_Controller : Singleton<Fitchneil_Controller>
 			//See if the game just ended.
 			if (isGameOver)
 			{
-				//TODO: Do game-ending stuff.
-				Debug.Log("Game Over!");
+				if (IsAttackersTurn)
+				{
+					AttackersWinStuff.SetActive(true);
+				}
+				else
+				{
+					DefendersWinStuff.SetActive(true);
+				}
+
+				//Hang until the user goes back to the main menu.
+				while (true)
+					yield return null;
 			}
 
 			yield return null;
 		}
-	}
-	private void AddPieceDelegate(Vector2i pos, SpriteRenderer spr, bool isAttacker)
-	{
-		SpriteSelector.Instance.Objects.Add(spr, (r, p) =>
-			{
-				if (movements == null && !clickedPiece.HasValue && IsAttackersTurn == isAttacker)
-				{
-					clickedPiece = pos;
-				}
-
-				return false;
-			});
 	}
 }
