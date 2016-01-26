@@ -178,6 +178,8 @@ namespace Fitchneil
 				dpGO.transform.position = ToWorld(p.CurrentPos);
 
 				//Destroy the piece.
+				if (p.Owner == Piece.Attackers)
+					NAttackerPieces -= 1;
 				theBoard[p.CurrentPos.x, p.CurrentPos.y] = null;
 				Destroy(p.gameObject);
 			}

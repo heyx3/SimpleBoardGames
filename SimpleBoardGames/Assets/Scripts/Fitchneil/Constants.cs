@@ -24,7 +24,7 @@ namespace Fitchneil
 		public float MovePieceTime = 0.25f;
 
 
-		public SpriteRenderer AttackerText, DefenderText;
+		public SpriteRenderer[] AttackerTexts, DefenderTexts;
 		[NonSerialized]
 		public Color InitialAttackerTextColor, InitialDefenderTextColor;
 
@@ -56,8 +56,8 @@ namespace Fitchneil
 
 		void Start()
 		{
-			InitialAttackerTextColor = AttackerText.color;
-			InitialDefenderTextColor = DefenderText.color;
+			InitialAttackerTextColor = AttackerTexts[0].color;
+			InitialDefenderTextColor = DefenderTexts[0].color;
 		}
 	}
 }
