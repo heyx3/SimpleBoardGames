@@ -6,30 +6,27 @@ using UnityEngine;
 namespace BoardGames
 {
 	/// <summary>
-	/// An expandable collection of GameObjects that represent possible movements that can be made
+	/// An expandable collection of GameObjects with sprites.
 	/// on the board.
 	/// </summary>
-	public class MovementIndicators : Singleton<MovementIndicators>
+	public class SpritePool : Singleton<SpritePool>
 	{
-		public Sprite IndicatorSprite;
-		public string GameObjectNames = "Possible Movement";
-		public Transform ParentContainer = null;
-		public int SortingLayer = 1;
-
 		private List<SpriteRenderer> usedSprites = new List<SpriteRenderer>(),
 									 unusedSprites = new List<SpriteRenderer>();
 
 
-		public List<SpriteRenderer> AllocateSprites(int nSprites)
+		public List<SpriteRenderer> AllocateSprites(int nSprites, Sprite spr,
+													int sortingLayer = 1,
+													Transform parentContainer = null,
+													string names = "Pooled Sprite")
 		{
 			//Make sure there are enough unused sprites to allocate.
 			while (unusedSprites.Count < nSprites)
 			{
-				SpriteRenderer spr = Utilities.CreateSprite(IndicatorSprite, GameObjectNames,
-															null, ParentContainer,
-															SortingLayer);
-				spr.gameObject.SetActive(false);
-				unusedSprites.Add(spr);
+				GameObject go = new GameObject();
+				SpriteRenderer sprR = go.AddComponent<SpriteRenderer>();
+				go.SetActive(false);
+				unusedSprites.Add(sprR);
 			}
 
 			//Allocate the unused sprites.
@@ -38,6 +35,10 @@ namespace BoardGames
 			{
 				//Set up the GameObject for this move.
 				unusedSprites[0].gameObject.SetActive(true);
+				unusedSprites[0].gameObject.name = names;
+				unusedSprites[0].transform.parent = parentContainer;
+				unusedSprites[0].sprite = spr;
+				unusedSprites[0].sortingOrder = sortingLayer;
 
 				//Set up the various lists storing used/unused sprites.
 				used.Add(unusedSprites[0]);

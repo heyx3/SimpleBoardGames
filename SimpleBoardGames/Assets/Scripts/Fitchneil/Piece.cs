@@ -141,7 +141,9 @@ namespace Fitchneil
 		private void SetUpMoves()
 		{
 			moves = new List<Movement>(Board.Instance.GetMoves(this));
-			movementIndicators = BoardGames.MovementIndicators.Instance.AllocateSprites(moves.Count);
+			movementIndicators = BoardGames.SpritePool.Instance.AllocateSprites(moves.Count,
+																				Constants.Instance.Movement,
+																				1, null, "Movement Indicator");
 
 			for (int i = 0; i < moves.Count; ++i)
 			{
@@ -163,7 +165,7 @@ namespace Fitchneil
 				return;
 
 			moves = null;
-			BoardGames.MovementIndicators.Instance.DeallocateSprites(movementIndicators);
+			BoardGames.SpritePool.Instance.DeallocateSprites(movementIndicators);
 			movementIndicators = null;
 		}
 	}
