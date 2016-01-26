@@ -9,6 +9,8 @@ namespace Fitchneil
 	{
 		public override System.Collections.IEnumerator RunLogicCoroutine()
 		{
+			Screen.orientation = ScreenOrientation.Landscape;
+
 			//Wait a little bit and then start the first turn.
 			yield return new WaitForSeconds(0.5f);
 			StateMachine.Instance.CurrentState = new State_PlayerTurn(Piece.Attackers);

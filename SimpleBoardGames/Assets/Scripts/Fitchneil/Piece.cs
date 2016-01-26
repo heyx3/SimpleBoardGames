@@ -39,7 +39,7 @@ namespace Fitchneil
 
 		public override void OnDrag(Vector2 startMouseWorldPos, Vector2 currentMouseWorldPos)
 		{
-			if (!CanDragMe)
+			if (!CanDragMe || moves == null)
 				return;
 
 			MyTr.position = currentMouseWorldPos;
@@ -86,7 +86,7 @@ namespace Fitchneil
 		}
 		public override void OnStopDrag(Vector2 startMouseWorldPos, Vector2 endMouseWorldPos)
 		{
-			if (!CanDragMe)
+			if (!CanDragMe || moves == null)
 				return;
 
 			
@@ -141,9 +141,9 @@ namespace Fitchneil
 		private void SetUpMoves()
 		{
 			moves = new List<Movement>(Board.Instance.GetMoves(this));
-			movementIndicators = BoardGames.SpritePool.Instance.AllocateSprites(moves.Count,
-																				Constants.Instance.Movement,
-																				1, null, "Movement Indicator");
+			movementIndicators = SpritePool.Instance.AllocateSprites(moves.Count,
+																	 Constants.Instance.Movement,
+																	 1, null, "Movement Indicator");
 
 			for (int i = 0; i < moves.Count; ++i)
 			{
@@ -165,7 +165,7 @@ namespace Fitchneil
 				return;
 
 			moves = null;
-			BoardGames.SpritePool.Instance.DeallocateSprites(movementIndicators);
+			SpritePool.Instance.DeallocateSprites(movementIndicators);
 			movementIndicators = null;
 		}
 	}

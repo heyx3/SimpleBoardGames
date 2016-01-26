@@ -84,23 +84,19 @@ namespace Fitchneil
 				}
 
 
-				//Execute the movement.
+				//Execute the movement and switch turns.
 				Board.Instance.ApplyMove(mv);
-				yield return new WaitForSeconds(Consts.MovePieceTime + 0.25f);
+				CurrentPlayer = (CurrentPlayer == Piece.Attackers ?
+									Piece.Defenders :
+									Piece.Attackers);
+				moveToExecute = null;
+				yield return new WaitForSeconds(Consts.MovePieceTime);
 
 				//If that move won the game, then end the game.
 				if (endsGame)
 				{
 					StateMachine.Instance.CurrentState = new State_EndGame(CurrentPlayer);
 					yield break;
-				}
-				//Otherwise, switch turns.
-				else
-				{
-					CurrentPlayer = (CurrentPlayer == Piece.Attackers ?
-										Piece.Defenders :
-										Piece.Attackers);
-					moveToExecute = null;
 				}
 			}
 		}

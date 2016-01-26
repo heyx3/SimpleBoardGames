@@ -14,7 +14,7 @@ public static class SceneSetups
 		go.AddComponent<Fitchneil.Board>();
 		go.AddComponent<Fitchneil.Constants>();
 		go.AddComponent<Fitchneil.StateMachine>();
-		go.AddComponent<BoardGames.SpritePool>();
+		go.AddComponent<SpritePool>();
 		go.AddComponent<BoardGames.InputManager>();
 	}
 }
