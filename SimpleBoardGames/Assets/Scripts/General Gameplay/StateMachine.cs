@@ -10,8 +10,7 @@ namespace BoardGames
 	/// </summary>
 	public abstract class State<BoardType, PieceType, LocationType, MoveType>
 		where PieceType : Piece<LocationType>
-		where LocationType : struct
-		where MoveType : struct, IMovement<LocationType, PieceType>
+		where MoveType : Movement<LocationType, PieceType>
 		where BoardType : Board<PieceType, LocationType, MoveType>
 	{
 		public abstract IEnumerator RunLogicCoroutine();
@@ -25,8 +24,7 @@ namespace BoardGames
 	public abstract class StateMachine<BoardType, PieceType, LocationType, MoveType>
 		: Singleton<StateMachine<BoardType, PieceType, LocationType, MoveType>>
 		where PieceType : Piece<LocationType>
-		where LocationType : struct
-		where MoveType : struct, IMovement<LocationType, PieceType>
+		where MoveType : Movement<LocationType, PieceType>
 		where BoardType : Board<PieceType, LocationType, MoveType>
 	{
 		/// <summary>

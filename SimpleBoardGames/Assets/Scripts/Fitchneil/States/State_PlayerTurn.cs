@@ -13,7 +13,7 @@ namespace Fitchneil
 	{
 		public BoardGames.Players CurrentPlayer;
 
-		private Movement? moveToExecute = null;
+		private Movement moveToExecute = null;
 
 
 		public State_PlayerTurn(BoardGames.Players currentPlayer)
@@ -50,10 +50,8 @@ namespace Fitchneil
 
 
 				//Wait until a move is queued up.
-				while (!moveToExecute.HasValue)
+				while (moveToExecute == null)
 					yield return null;
-
-				Movement mv = moveToExecute.Value;
 
 
 				//See if this move will end the game.
@@ -63,9 +61,9 @@ namespace Fitchneil
 				if (CurrentPlayer == Piece.Attackers)
 				{
 					//The attackers win if the king is captured.
-					for (int i = 0; i < mv.Captures.Count; ++i)
+					for (int i = 0; i < moveToExecute.Captures.Count; ++i)
 					{
-						if (mv.Captures[i].IsKing)
+						if (moveToExecute.Captures[i].IsKing)
 						{
 							endsGame = true;
 							break;
@@ -75,13 +73,13 @@ namespace Fitchneil
 				else
 				{
 					//The defenders win if the king escapes, or if not enough attackers will be left.
-					if (mv.IsMoving.IsKing &&
-						(mv.Pos.x == 0 || mv.Pos.x == Board.BoardSize - 1 ||
-						 mv.Pos.y == 0 || mv.Pos.y == Board.BoardSize - 1))
+					if (moveToExecute.IsMoving.IsKing &&
+						(moveToExecute.Pos.x == 0 || moveToExecute.Pos.x == Board.BoardSize - 1 ||
+						 moveToExecute.Pos.y == 0 || moveToExecute.Pos.y == Board.BoardSize - 1))
 					{
 						endsGame = true;
 					}
-					else if (Brd.NAttackerPieces  - mv.Captures.Count < 3)
+					else if (Brd.NAttackerPieces  - moveToExecute.Captures.Count < 3)
 					{
 						endsGame = true;
 					}
@@ -89,7 +87,7 @@ namespace Fitchneil
 
 
 				//Execute the movement and switch turns.
-				Board.Instance.ApplyMove(mv);
+				Board.Instance.ApplyMove(moveToExecute);
 				CurrentPlayer = (CurrentPlayer == Piece.Attackers ?
 									Piece.Defenders :
 									Piece.Attackers);

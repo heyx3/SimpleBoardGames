@@ -9,7 +9,6 @@ namespace BoardGames
 	/// A piece on a game board. Generally has a collider (for click detection) and a sprite.
 	/// </summary>
 	public abstract class Piece<LocationType> : InputResponder
-		where LocationType : struct
 	{
 		public Players Owner;
 

@@ -27,11 +27,26 @@ namespace TronsTour
 			Vector3 oldPos = brd.ToWorld(CurrentPos),
 					newPos = brd.ToWorld(newPosI);
 
+			//Get whether this is currently a valid move.
+			bool isValid = false;
+			foreach (Movement m in moves)
+			{
+				if (m.Pos == newPosI)
+				{
+					isValid = true;
+					break;
+				}
+			}
+
 			//Update UI elements.
 			for (int i = 0; i < DraggingTracers.Length; ++i)
 			{
 				DraggingTracers[i].position = newPos;
 				DraggingTracers[i].gameObject.SetActive(true);
+
+				DraggingTracers[i].GetComponent<SpriteRenderer>().color = (isValid ?
+					Constants.Instance.GoodMoveCol :
+					Constants.Instance.BadMoveCol);
 			}
 			PrevPosIndicator.position = oldPos;
 			PrevPosIndicator.gameObject.SetActive(true);

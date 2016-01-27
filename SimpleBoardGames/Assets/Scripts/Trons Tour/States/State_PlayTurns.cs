@@ -16,7 +16,7 @@ namespace TronsTour
 			}
 		}
 
-		private Movement? toExecute = null;
+		private Movement toExecute = null;
 
 
 		public State_PlayTurns(BoardGames.Players currentPlayer)
@@ -27,7 +27,7 @@ namespace TronsTour
 
 		public void ExecuteTurn(Movement move)
 		{
-			UnityEngine.Assertions.Assert.IsFalse(toExecute.HasValue, "Two moves in one turn!");
+			UnityEngine.Assertions.Assert.IsNull(toExecute, "Two moves in one turn!");
 			toExecute = move;
 		}
 
@@ -59,14 +59,12 @@ namespace TronsTour
 				//Wait until a move is queued up.
 				Brd.GetPiece(NextPlayer).MyCollider.enabled = false;
 				Brd.GetPiece(CurrentPlayer).MyCollider.enabled = true;
-				while (!toExecute.HasValue)
+				while (toExecute == null)
 					yield return null;
-
-				Movement mv = toExecute.Value;
 
 
 				//Execute the movement and switch turns.
-				Board.Instance.ApplyMove(mv);
+				Board.Instance.ApplyMove(toExecute);
 				CurrentPlayer = NextPlayer;
 				toExecute = null;
 				yield return new WaitForSeconds(Consts.MovePieceTime);

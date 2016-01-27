@@ -1,31 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using BoardGames;
 
 
 namespace Fitchneil
 {
-	public struct Movement : IMovement<Vector2i, Piece>
+	public class Movement : BoardGames.Movement<Vector2i, Piece>
 	{
-		public Piece IsMoving { get { return p; } set { p = value; } }
-		public Vector2i Pos { get { return pos; } set { pos = value; } }
-
 		/// <summary>
 		/// The pieces that would be captured if this move was taken.
 		/// </summary>
-		public List<Piece> Captures { get { return caps; } set { caps = value; } }
-
-		private Piece p;
-		private Vector2i pos;
-		private List<Piece> caps;
+		public List<Piece> Captures { get; set; }
 
 
-		public Movement(Vector2i _pos, Piece isMoving, List<Piece> captures)
+		public Movement() { }
+		public Movement(Vector2i pos, Piece isMoving, List<Piece> captures)
+			: base(pos, isMoving)
 		{
-			pos = _pos;
-			p = isMoving;
-			caps = captures;
+			Captures = captures;
 		}
 
 

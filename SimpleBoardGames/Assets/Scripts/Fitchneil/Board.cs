@@ -108,6 +108,7 @@ namespace Fitchneil
 							ref move, out isBlocking))
 				{
 					yield return move;
+					move = new Movement();
 				}
 				if (isBlocking)
 					break;
@@ -123,6 +124,7 @@ namespace Fitchneil
 							ref move, out isBlocking))
 				{
 					yield return move;
+					move = new Movement();
 				}
 				if (isBlocking)
 					break;
@@ -139,6 +141,7 @@ namespace Fitchneil
 							ref move, out isBlocking))
 				{
 					yield return move;
+					move = new Movement();
 				}
 				if (isBlocking)
 					break;
@@ -154,6 +157,7 @@ namespace Fitchneil
 							ref move, out isBlocking))
 				{
 					yield return move;
+					move = new Movement();
 				}
 				if (isBlocking)
 					break;

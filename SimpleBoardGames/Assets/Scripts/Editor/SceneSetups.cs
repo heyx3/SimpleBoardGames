@@ -16,6 +16,7 @@ public static class SceneSetups
 		go.AddComponent<Fitchneil.StateMachine>();
 		go.AddComponent<SpritePool>();
 		go.AddComponent<BoardGames.InputManager>();
+		go.AddComponent<BackToMainMenu>();
 	}
 
 	[MenuItem("Board Games/Set Up Tron's Tour (select the two pieces first)")]
@@ -28,6 +29,7 @@ public static class SceneSetups
 		go.AddComponent<TronsTour.StateMachine>();
 		go.AddComponent<SpritePool>();
 		go.AddComponent<BoardGames.InputManager>();
+		go.AddComponent<BackToMainMenu>();
 
 		if (Selection.gameObjects.Length != 2)
 		{

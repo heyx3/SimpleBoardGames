@@ -15,6 +15,9 @@ namespace TronsTour
 
 		public GameObject PlacePieceEffectPrefab;
 
+		public Color GoodMoveCol = Color.green,
+					 BadMoveCol = Color.red;
+
 		public GameObject[] WinnerUIs;
 
 		
