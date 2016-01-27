@@ -18,6 +18,17 @@ The rules are as follows:
 * Defenders/King win by getting the King out to the edge of the board, or by killing all attackers
 * Attackers win by surrounding the King on all sides
 
+##Tron's Tour
+
+A game invented by William Manning and Julia Wlochowski. It takes place on a rectangular board of any size you want (the project uses 6x9).
+
+The rules are as follows:
+
+* Each player gets one piece and starts on opposite sides of the board.
+* The pieces move like a knight in chess: two hops along one direction, then one hop along another direction.
+* Pieces can never move onto a space that has already been occupied by a piece in the past.
+* The first player to not have any legal moves during his turn loses.
+
 
 # How to implement a new game
 
@@ -46,7 +57,7 @@ Use the following steps to implement your own board game:
 3. Create/implement a `StateManager` and base `State` class, inheriting from `BoardGames.StateManager<>` and `BoardGames.State<>` respectively, for your game logic state machine. Most games will have a simple `StateManager` that just sets the initial state on `Start()`.
 4. Create various game states to control game flow.
   * When the game ends, you should return to the "MainMenu" scene.
-5. For ease of use, open up "Scripts/Editor/SceneSetups.cs" and add a custom method that creates a GameObject with all the necessary classes for the start of the scene. Use the methods that already exist in the class as a template.
+5. For ease of use, open up "Scripts/Editor/SceneSetups.cs" and add a custom method that createsGameObjects with all the necessary classes for the start of the scene. Use the methods that already exist in the class as a template.
 6. Create a new scene in "Assets/Scenes" for your game and call your custom method from the previous step by clicking "Board Games>[your custom method]" in the taskbar. Then set up the camera, game board, and various member fields in the controller object.
 7. Add a new method in "Scripts/MainMenuController.cs" that loads your game scene, then add a button in the MainMenu scene which calls that method.
 8. Add your scene to the list of scenes in the build menu.
