@@ -19,4 +19,8 @@ public class MainMenuController : MonoBehaviour
 	{
 		UnityEngine.SceneManagement.SceneManager.LoadScene("Fitchneil");
 	}
+	public void OnButton_TronsTour()
+	{
+		UnityEngine.SceneManagement.SceneManager.LoadScene("TronsTour");
+	}
 }

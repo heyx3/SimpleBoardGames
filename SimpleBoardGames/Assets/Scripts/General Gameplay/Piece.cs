@@ -3,7 +3,6 @@ using System.Collections;
 using UnityEngine;
 
 
-
 namespace BoardGames
 {
 	/// <summary>

@@ -17,4 +17,30 @@ public static class SceneSetups
 		go.AddComponent<SpritePool>();
 		go.AddComponent<BoardGames.InputManager>();
 	}
+
+	[MenuItem("Board Games/Set Up Tron's Tour (select the two pieces first)")]
+	public static void CreateTronsTour()
+	{
+		GameObject go = new GameObject("Tron's Tour Controller");
+
+		go.AddComponent<TronsTour.Constants>();
+		go.AddComponent<TronsTour.Board>();
+		go.AddComponent<TronsTour.StateMachine>();
+		go.AddComponent<SpritePool>();
+		go.AddComponent<BoardGames.InputManager>();
+
+		if (Selection.gameObjects.Length != 2)
+		{
+			EditorUtility.DisplayDialog("Error", "You must select the 2 game pieces and nothing else!",
+										"OK");
+			return;
+		}
+
+		for (int i = 0; i < 2; ++i)
+		{
+			Selection.gameObjects[i].AddComponent<SpriteRenderer>();
+			Selection.gameObjects[i].AddComponent<BoxCollider2D>();
+			Selection.gameObjects[i].AddComponent<TronsTour.Piece>();
+		}
+	}
 }
