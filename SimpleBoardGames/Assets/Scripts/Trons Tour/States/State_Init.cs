@@ -9,6 +9,8 @@ namespace TronsTour
 	{
 		public override System.Collections.IEnumerator RunLogicCoroutine()
 		{
+			Screen.orientation = ScreenOrientation.Portrait;
+
 			//Wait a bit, then start the first turn.
 			yield return new WaitForSeconds(0.25f);
 			StateMachine.Instance.CurrentState = new State_PlayTurns(BoardGames.Players.One);

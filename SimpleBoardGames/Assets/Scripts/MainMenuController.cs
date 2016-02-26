@@ -6,7 +6,7 @@ public class MainMenuController : MonoBehaviour
 {
 	void Awake()
 	{
-		Screen.orientation = ScreenOrientation.Landscape;
+		Screen.orientation = ScreenOrientation.Portrait;
 		Input.backButtonLeavesApp = true;
 	}
 	void OnDestroy()
