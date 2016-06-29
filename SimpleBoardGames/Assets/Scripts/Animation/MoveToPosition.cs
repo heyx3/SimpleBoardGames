@@ -13,6 +13,9 @@ public class MoveToPosition : MonoBehaviour
 	public float TotalTime = 1.0f;
 	public AnimationCurve MovementCurve = AnimationCurve.Linear(0.0f, 0.0f, 1.0f, 1.0f);
 
+	public bool DestroyWhenDone = true;
+
+
 	public float T { get; private set; }
 
 	public Vector3 StartPos { get; private set; }
@@ -37,7 +40,8 @@ public class MoveToPosition : MonoBehaviour
 			if (OnFinishedMove != null)
 				OnFinishedMove(MyTr);
 
-			Destroy(this);
+			if (DestroyWhenDone)
+				Destroy(this);
 		}
 	}
 }

@@ -6,7 +6,7 @@ using UnityEngine;
 namespace BoardGames
 {
 	/// <summary>
-	/// A piece on a game board. Generally has a collider (for click detection) and a sprite.
+	/// A piece on a game board. Must have a collider (for click detection).
 	/// </summary>
 	public abstract class Piece<LocationType> : InputResponder
 	{
