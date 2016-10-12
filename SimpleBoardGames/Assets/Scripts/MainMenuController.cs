@@ -23,4 +23,12 @@ public class MainMenuController : MonoBehaviour
 	{
 		UnityEngine.SceneManagement.SceneManager.LoadScene("TronsTour");
 	}
+	public void OnButton_Server()
+	{
+		UnityEngine.SceneManagement.SceneManager.LoadScene("Server");
+	}
+	public void OnButton_Quit()
+	{
+		Application.Quit();
+	}
 }
