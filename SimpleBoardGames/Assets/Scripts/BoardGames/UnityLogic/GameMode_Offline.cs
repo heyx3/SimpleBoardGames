@@ -20,24 +20,32 @@ namespace BoardGames.UnityLogic.GameMode
 		where LocationType : IEquatable<LocationType>
 	{
 		/// <summary>
+		/// Raised when one player wins, or possibly if there is a tie.
+		/// </summary>
+		public event Action<GameMode<LocationType>, Players?> OnPlayerWin;
+
+
+		/// <summary>
 		/// NOTE: This is the name of the game's save file,
 		///     so make sure it doesn't use any strange characters.
 		/// </summary>
 		protected abstract string GameName { get; }
 
-		private string filePath { get { return Path.Combine(Application.dataPath, GameName + ".save"); } }
-		
-
-		public void Quit(bool saveProgress)
+		private string filePath
 		{
-			if (saveProgress)
-				SaveGame(filePath);
-			else if (File.Exists(filePath))
-				File.Delete(filePath);
-
-			UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+			get
+			{
+				return Path.Combine((Application.isEditor ?
+										 Path.Combine(Application.dataPath, "..\\") :
+										 Application.dataPath),
+									Path.Combine("Saves", GameName + ".save"));
+			}
 		}
 
+		private Coroutine gameEndingCoroutine = null;
+		private bool isGameEnding = false;
+		
+		
 		protected override void Awake()
 		{
 			base.Awake();
@@ -49,8 +57,39 @@ namespace BoardGames.UnityLogic.GameMode
 			//Whenever the turn changes, write the new game state to the file.
 			CurrentTurn.OnChanged += (thisMode, oldTurn, newTurn) =>
 			{
-				SaveGame(filePath);
+				if (!isGameEnding)
+					SaveGame(filePath);
 			};
+		}
+
+		protected void EndGame(Players? winner)
+		{
+			if (gameEndingCoroutine == null)
+			{
+				//Clear the save file.
+				isGameEnding = true;
+				try
+				{
+					if (File.Exists(filePath))
+						File.Delete(filePath);
+				}
+				catch (Exception e)
+				{
+					Debug.LogError("Couldn't delete save file " + filePath +
+								       " (" + e.GetType().Name + "): " + e.Message);
+				}
+
+				gameEndingCoroutine = StartCoroutine(EndGameCoroutine());
+
+				if (OnPlayerWin != null)
+					OnPlayerWin(this, winner);
+			}
+		}
+
+		protected virtual System.Collections.IEnumerator EndGameCoroutine()
+		{
+			yield return new WaitForSeconds(WinWaitTime);
+			UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
 		}
 	}
 }

@@ -8,18 +8,21 @@ namespace BoardGames
 	public abstract class Board<LocationType>
 		where LocationType : IEquatable<LocationType>
 	{
-		public event Action<Board<LocationType>, Movement<LocationType>> OnMove;
-		public event Action<Board<LocationType>, Placement<LocationType>> OnPlace;
+		//TODO: Keep a stack of actions to undo/redo, and add UI for it.
 
-		public void RaiseEvent_Movement(Movement<LocationType> movement)
+		public event System.Action<Board<LocationType>,
+								   BoardGames.Action<LocationType>> OnAction,
+																	OnUndoAction;
+
+		public void DidAction(Action<LocationType> action)
 		{
-			if (OnMove != null)
-				OnMove(this, movement);
+			if (OnAction != null)
+				OnAction(this, action);
 		}
-		public void RaiseEvent_Placement(Placement<LocationType> placement)
+		public void UndidAction(Action<LocationType> action)
 		{
-			if (OnPlace != null)
-				OnPlace(this, placement);
+			if (OnUndoAction != null)
+				OnUndoAction(this, action);
 		}
 
 
@@ -45,15 +48,15 @@ namespace BoardGames
 		}
 
 		/// <summary>
-		/// Gets all possible moves the given piece can currently do.
+		/// Gets all possible actions the given piece can currently perform.
 		/// Default behavior: returns an empty container.
 		/// </summary>
-		public virtual IEnumerable<Movement<LocationType>> GetMoves(Piece<LocationType> piece) { yield break; }
+		public virtual IEnumerable<Action<LocationType>> GetActions(Piece<LocationType> piece) { yield break; }
 		/// <summary>
-		/// Gets all placements the given player can currently make.
-		/// Default behavior: returns an empty container.
+		/// Gets all possible actions the given player can currently perform.
+		/// Note that this should be used for any actions that aren't tied to a specific piece.
 		/// </summary>
-		public virtual IEnumerable<Placement<LocationType>> GetNewPlacements(Players player) { yield break; }
+		public virtual IEnumerable<Action<LocationType>> GetActions(Players player) { yield break; }
 
 		
 		//The board must be serializable to and from a byte stream.

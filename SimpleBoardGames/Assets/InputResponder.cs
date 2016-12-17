@@ -6,7 +6,6 @@ using UnityEngine;
 /// <summary>
 /// Responds to tap/click inputs.
 /// </summary>
-[RequireComponent(typeof(Collider2D))]
 public class InputResponder : MonoBehaviour
 {
 	public Transform MyTr { get; private set; }
@@ -17,7 +16,7 @@ public class InputResponder : MonoBehaviour
 	/// The minimum distance in world units
 	/// before the mouse is considered to be dragging this item.
 	/// </summary>
-	public float MinDragDistance = 0.1f;
+	public float MinDragDistance = 0.5f;
 
 
 	/// <summary>
@@ -70,5 +69,8 @@ public class InputResponder : MonoBehaviour
 	{
 		MyCollider = GetComponent<Collider2D>();
 		MyTr = transform;
+
+		if (MyCollider == null)
+			Debug.LogError("InputResponder \"" + gameObject.name + "\" doesn't have a Collider2D");
 	}
 }

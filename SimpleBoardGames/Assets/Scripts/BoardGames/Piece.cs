@@ -8,6 +8,7 @@ namespace BoardGames
 	/// A piece on a game board.
 	/// </summary>
 	public abstract class Piece<LocationType>
+		where LocationType : IEquatable<LocationType>
 	{
 		public Stat<LocationType, Piece<LocationType>> CurrentPos { get; private set; }
 

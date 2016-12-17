@@ -12,14 +12,19 @@ namespace BoardGames.UnityLogic
 	public abstract class InputController<LocationType> : Singleton<InputController<LocationType>>
 	{
 		/// <summary>
+		/// The camera used to interpret mouse clicks.
+		/// </summary>
+		public Camera MouseCam;
+
+		/// <summary>
 		/// Raised when the mouse clicks on a board position.
 		/// </summary>
-		public event Action<LocationType> OnBoardPosClicked;
+		public event System.Action<LocationType> OnBoardPosClicked;
 		/// <summary>
 		/// Raised when the mouse clicks on somewhere outside a board position.
 		/// The argument is the mouse position.
 		/// </summary>
-		public event Action<Vector3> OnWorldClicked;
+		public event System.Action<Vector3> OnWorldClicked;
 
 
 		/// <summary>
@@ -29,9 +34,12 @@ namespace BoardGames.UnityLogic
 		protected abstract Optional<LocationType> ToBoardPos(Vector3 mousePos);
 
 
-		public void Callback_Click(Vector3 pos)
+		public void Callback_Click()
 		{
-			Optional<LocationType> clickedPos = ToBoardPos(pos);
+			Vector3 screenPos = Input.mousePosition,
+					worldPos = MouseCam.ScreenToWorldPoint(screenPos);
+
+			Optional<LocationType> clickedPos = ToBoardPos(worldPos);
 
 			if (clickedPos.HasValue)
 			{
@@ -41,7 +49,7 @@ namespace BoardGames.UnityLogic
 			else
 			{
 				if (OnWorldClicked != null)
-					OnWorldClicked(pos);
+					OnWorldClicked(worldPos);
 			}
 		}
 	}

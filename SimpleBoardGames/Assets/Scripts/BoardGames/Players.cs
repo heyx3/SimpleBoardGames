@@ -8,17 +8,17 @@
 		One = 0,
 		Two = 1,
 	}
+}
 
-	public static class PlayersExtensions
+public static class PlayersExtensions
+{
+	public static BoardGames.Players Switched(this BoardGames.Players p)
 	{
-		public static Players Switched(this Players p)
+		switch (p)
 		{
-			switch (p)
-			{
-				case Players.One: return Players.Two;
-				case Players.Two: return Players.One;
-				default: throw new System.NotImplementedException(p.ToString());
-			}
+			case BoardGames.Players.One: return BoardGames.Players.Two;
+			case BoardGames.Players.Two: return BoardGames.Players.One;
+			default: throw new System.NotImplementedException(p.ToString());
 		}
 	}
 }

@@ -14,6 +14,7 @@ namespace BoardGames.UnityLogic
 	/// The data structure used to represent positions on the game board.
 	/// </typeparam>
 	public abstract class PieceRenderer<LocationType> : InputResponder
+		where LocationType : IEquatable<LocationType>
 	{
 		public Piece<LocationType> ToTrack
 		{

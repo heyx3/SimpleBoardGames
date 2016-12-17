@@ -10,14 +10,18 @@ namespace BoardGames.UnityLogic.GameMode
 	public abstract class GameMode<LocationType> : Singleton<GameMode<LocationType>>
 		where LocationType : IEquatable<LocationType>
 	{
+		/// <summary>
+		/// The time between a player winning the game and returning to the main menu.
+		/// </summary>
+		public float WinWaitTime = 2.5f;
+
 		public Board<LocationType> TheBoard { get; private set; }
 
 		public Stat<Players, GameMode<LocationType>> CurrentTurn { get; private set; }
 
 
 		protected abstract Board<LocationType> CreateNewBoard();
-		protected abstract void OnMove(Movement<LocationType> move);
-		protected abstract void OnPlace(Placement<LocationType> place);
+		protected abstract void OnAction(BoardGames.Action<LocationType> move);
 		
 		/// <summary>
 		/// Returns whether it was successful.
@@ -26,7 +30,11 @@ namespace BoardGames.UnityLogic.GameMode
 		{
 			try
 			{
-				using (BinaryWriter writer = new BinaryWriter(new FileStream(filePath, FileMode.Truncate)))
+				string dir = Path.GetDirectoryName(filePath);
+				if (!Directory.Exists(dir))
+					Directory.CreateDirectory(dir);
+
+				using (BinaryWriter writer = new BinaryWriter(new FileStream(filePath, FileMode.Create)))
 				{
 					SaveGame(writer);
 				}
@@ -79,8 +87,7 @@ namespace BoardGames.UnityLogic.GameMode
 			TheBoard = CreateNewBoard();
 			CurrentTurn = new Stat<Players, GameMode<LocationType>>(this, Players.One);
 
-			TheBoard.OnMove += (board, move) => OnMove(move);
-			TheBoard.OnPlace += (board, place) => OnPlace(place);
+			TheBoard.OnAction += (board, action) => OnAction(action);
 		}
 	}
 }
