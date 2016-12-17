@@ -57,6 +57,8 @@ namespace Fitchneil
 		}
 		public override void UndoAction()
 		{
+			ThePiece.CurrentPos.Value = StartPos;
+
 			//Put back every piece that was captured.
 			Board board = (Board)TheBoard;
 			foreach (Piece piece in captures)
