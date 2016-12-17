@@ -1,7 +1,7 @@
 ﻿using System;
 
 
-public struct Vector2i
+public struct Vector2i : IEquatable<Vector2i>
 {
 	public int x, y;
 
@@ -70,4 +70,5 @@ public struct Vector2i
 	{
 		return (obj is Vector2i) && ((Vector2i)obj) == this;
 	}
+	public bool Equals(Vector2i v) { return this == v; }
 }
