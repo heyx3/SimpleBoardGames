@@ -31,11 +31,6 @@ namespace Fitchneil
 				   boardPos.y >= 0 && boardPos.y < BoardSize;
 		}
 
-		
-		/// <summary>
-		/// The number of attackers left on the board.
-		/// </summary>
-		public int NAttackerPieces { get; private set; }
 
 		/// <summary>
 		/// Raised when a piece captures another piece.
@@ -45,6 +40,12 @@ namespace Fitchneil
 		///     3) The piece whose movement resulted in the capture.
 		/// </summary>
 		public event Action<Board, Piece, Piece> OnPieceCaptured;
+		/// <summary>
+		/// Raised when a piece is added to the board.
+		/// This happens when a move that captures pieces is undone.
+		/// </summary>
+		public event Action<Board, Piece> OnPieceAdded;
+
 		/// <summary>
 		/// When this board deserializes a stream to read a new state,
 		///     all current pieces are thrown away and new pieces are put on the board.
@@ -62,7 +63,6 @@ namespace Fitchneil
 			for (int y = 0; y < BoardSize; ++y)
 				for (int x = 0; x < BoardSize; ++x)
 					theBoard[x, y] = null;
-			NAttackerPieces = 0;
 
 
 			//Create the pieces.
@@ -105,7 +105,15 @@ namespace Fitchneil
 			theBoard[BoardSize - 1, BoardSize - 1] =
 				new Piece(false, new Vector2i(BoardSize - 1, BoardSize - 1), Player_Attacker, this);
 
-			NAttackerPieces = GetPieces(Player_Attacker).Count();
+			//When a piece moves, switch its place in the grid.
+			OnAction += (thisBoard, action) =>
+			{
+				Action_Move movement = (Action_Move)action;
+
+				theBoard[movement.EndPos.x, movement.EndPos.y] =
+					theBoard[movement.StartPos.x, movement.StartPos.y];
+				theBoard[movement.StartPos.x, movement.StartPos.y] = null;
+			};
 		}
 
 
@@ -122,7 +130,7 @@ namespace Fitchneil
 				yield return theBoard[space.x, space.y];
 		}
 		
-		public override IEnumerable<BoardGames.Movement<Vector2i>> GetMoves(BoardGames.Piece<Vector2i> piece)
+		public override IEnumerable<BoardGames.Action<Vector2i>> GetActions(BoardGames.Piece<Vector2i> piece)
 		{
 			//See how far to the left and right the piece can move.
 			for (int xDir = -1; xDir <= 1; xDir += 2)
@@ -131,9 +139,10 @@ namespace Fitchneil
 				while (x >= 0 && x < BoardSize)
 				{
 					bool isBlocking;
-					Movement move = TryMove(piece.CurrentPos,
-											new Vector2i(x, piece.CurrentPos.Value.y),
-											out isBlocking);
+					Action_Move move = TryMove(piece.CurrentPos,
+											   new Vector2i(x, piece.CurrentPos.Value.y),
+											   out isBlocking);
+
 					if (move != null)
 						yield return move;
 
@@ -150,9 +159,10 @@ namespace Fitchneil
 				while (y >= 0 && y < BoardSize)
 				{
 					bool isBlocking;
-					Movement move = TryMove(piece.CurrentPos,
-											new Vector2i(piece.CurrentPos.Value.x, y),
-											out isBlocking);
+					Action_Move move = TryMove(piece.CurrentPos,
+											   new Vector2i(piece.CurrentPos.Value.x, y),
+											   out isBlocking);
+
 					if (move != null)
 						yield return move;
 
@@ -173,7 +183,7 @@ namespace Fitchneil
 		/// This variable will tell whether something is blocking
 		///     any further movement in this direction.
 		/// </param>
-		private Movement TryMove(Vector2i from, Vector2i to, out bool isBlocking)
+		private Action_Move TryMove(Vector2i from, Vector2i to, out bool isBlocking)
 		{
 			Piece p = theBoard[from.x, from.y];
 			Assert.IsNotNull(p, "No piece at " + from.ToString());
@@ -195,7 +205,7 @@ namespace Fitchneil
 
 			//Otherwise, it's a valid move.
 			isBlocking = false;
-			return new Movement(to, p, GetCaptures(from, to));
+			return new Action_Move(to, p, GetCaptures(from, to));
 		}
 		/// <summary>
 		/// Gets all captures that would happen when moving the piece currently at "from" to "to".
@@ -223,10 +233,11 @@ namespace Fitchneil
 				Piece piece2 = getPiece(pos);
 				return piece2 != null && piece2.Owner.Value == piece.Owner.Value;
 			};
-			Func<Piece, Vector2i, bool> isEnemyAtPos = (piece, pos) =>
+			Func<Piece, Vector2i, bool, bool> isEnemyAtPos = (piece, pos, includeKing) =>
 			{
 				Piece piece2 = getPiece(pos);
-				return piece2 != null && piece2.Owner.Value != piece.Owner.Value;
+				return piece2 != null && piece2.Owner.Value != piece.Owner.Value &&
+					   (includeKing || !piece2.IsKing);
 			};
 			Func<Vector2i, bool> isKingAtPos = (pos) =>
 			{
@@ -243,13 +254,13 @@ namespace Fitchneil
 			};
 
 			//See if any normal (i.e. non-king) enemies were captured.
-			if (to.x > 1 && isEnemyAtPos(p, to.LessX) && isAllyAtPos(p, to.LessX.LessX))
+			if (to.x > 1 && isEnemyAtPos(p, to.LessX, false) && isAllyAtPos(p, to.LessX.LessX))
 				caps.Add(getPiece(to.LessX));
-			if (to.x < BoardSize - 2 && isEnemyAtPos(p, to.MoreX) && isAllyAtPos(p, to.MoreX.MoreX))
+			if (to.x < BoardSize - 2 && isEnemyAtPos(p, to.MoreX, false) && isAllyAtPos(p, to.MoreX.MoreX))
 				caps.Add(getPiece(to.MoreX));
-			if (to.y > 1 && isEnemyAtPos(p, to.LessY) && isAllyAtPos(p, to.LessY.LessY))
+			if (to.y > 1 && isEnemyAtPos(p, to.LessY, false) && isAllyAtPos(p, to.LessY.LessY))
 				caps.Add(getPiece(to.LessY));
-			if (to.y < BoardSize - 2 && isEnemyAtPos(p, to.MoreY) && isAllyAtPos(p, to.MoreY.MoreY))
+			if (to.y < BoardSize - 2 && isEnemyAtPos(p, to.MoreY, false) && isAllyAtPos(p, to.MoreY.MoreY))
 				caps.Add(getPiece(to.MoreY));
 
 			//See if the King was captured.
@@ -291,6 +302,19 @@ namespace Fitchneil
 
 			if (OnPieceCaptured != null)
 				OnPieceCaptured(this, captured, capturedBy);
+		}
+		/// <summary>
+		/// Adds a new piece to the board (assumed to have an empty spot at the piece's position).
+		/// Used to undo actions that capture pieces.
+		/// </summary>
+		public void PlacePiece(Piece newPiece)
+		{
+			UnityEngine.Assertions.Assert.IsNull(theBoard[newPiece.CurrentPos.Value.x,
+														  newPiece.CurrentPos.Value.y]);
+			theBoard[newPiece.CurrentPos.Value.x, newPiece.CurrentPos.Value.y] = newPiece;
+
+			if (OnPieceAdded != null)
+				OnPieceAdded(this, newPiece);
 		}
 
 		public override void Serialize(BinaryWriter stream)
