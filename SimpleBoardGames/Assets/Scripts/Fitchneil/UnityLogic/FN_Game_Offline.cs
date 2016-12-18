@@ -24,6 +24,8 @@ namespace Fitchneil.UnityLogic.GameMode
 		protected override void Awake()
 		{
 			base.Awake();
+
+			Screen.orientation = ScreenOrientation.Portrait;
 			
 			//If the king moves to the edge of the board, the defenders win.
 			var kingPiece = TheBoard.GetPieces().First(p => ((Piece)p).IsKing);
@@ -42,7 +44,7 @@ namespace Fitchneil.UnityLogic.GameMode
 			{
 				if (captured.IsKing)
 					EndGame(Board.Player_Attacker);
-				else if (theBoard.GetPieces(Board.Player_Attacker).Count() == 0)
+				else if (theBoard.GetPieces(p => p.Owner.Value == Board.Player_Attacker).Count() == 0)
 					EndGame(Board.Player_Defender);
 			};
 		}

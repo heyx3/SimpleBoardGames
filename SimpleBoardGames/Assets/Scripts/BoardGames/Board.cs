@@ -31,20 +31,11 @@ namespace BoardGames
 		/// </summary>
 		public abstract IEnumerable<Piece<LocationType>> GetPieces();
 		/// <summary>
-		/// Gets all pieces located at the given position.
-		/// Default behavior: just calls "GetPieces()" and filters it by position.
+		/// Gets all pieces on the board that satisfy the given condition.
 		/// </summary>
-		public virtual IEnumerable<Piece<LocationType>> GetPieces(LocationType space)
+		public IEnumerable<Piece<LocationType>> GetPieces(Predicate<Piece<LocationType>> predicate)
 		{
-			return GetPieces().Where(p => p.CurrentPos.Value.Equals(space));
-		}
-		/// <summary>
-		/// Gets all game pieces belonging to the given player.
-		/// Default behavior: just calls "GetPieces()" and filters it by team.
-		/// </summary>
-		public virtual IEnumerable<Piece<LocationType>> GetPieces(Players team)
-		{
-			return GetPieces().Where(p => p.Owner.Value == team);
+			return GetPieces().Where(p => predicate(p));
 		}
 
 		/// <summary>

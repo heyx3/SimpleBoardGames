@@ -124,11 +124,6 @@ namespace Fitchneil
 					if (theBoard[x, y] != null)
 						yield return theBoard[x, y];
 		}
-		public override IEnumerable<BoardGames.Piece<Vector2i>> GetPieces(Vector2i space)
-		{
-			if (theBoard[space.x, space.y] != null)
-				yield return theBoard[space.x, space.y];
-		}
 		
 		public override IEnumerable<BoardGames.Action<Vector2i>> GetActions(BoardGames.Piece<Vector2i> piece)
 		{

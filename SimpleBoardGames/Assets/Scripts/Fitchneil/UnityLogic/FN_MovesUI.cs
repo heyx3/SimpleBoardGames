@@ -4,9 +4,12 @@ using System.Linq;
 using UnityEngine;
 
 
+//TODO: Make a generic BoardGames.MovesUI based on this.
+
+
 namespace Fitchneil.UnityLogic
 {
-	public class MovesUI : Singleton<MovesUI>
+	public class FN_MovesUI : Singleton<FN_MovesUI>
 	{
 		public Sprite MoveOptionSprite;
 		public Color NormalMoveColor = Color.yellow,
@@ -60,7 +63,7 @@ namespace Fitchneil.UnityLogic
 
 		private void AddMoveSelectionResponder(Action_Move move, GameObject go)
 		{
-			var collider = go.AddComponent<BoxCollider2D>();
+			go.AddComponent<BoxCollider2D>();
 
 			var input = go.AddComponent<InputResponder>();
 			input.OnStopClick += (_input, mPos) =>

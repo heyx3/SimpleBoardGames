@@ -8,9 +8,14 @@ namespace Fitchneil.UnityLogic
 {
 	public class FN_PieceDispatcher : Singleton<FN_PieceDispatcher>
 	{
+		public Sprite Sprite_Defender, Sprite_Attacker, Sprite_King;
+		public GameObject PiecePrefab, PieceCaptureEffectsPrefab;
+
+		public AnimationCurve PieceMovementCurve = AnimationCurve.EaseInOut(0.0f, 0.0f, 1.0f, 1.0f);
+		public float PieceMovementTime = 0.5f;
+
+
 		public Board TheBoard { get; private set; }
-		
-		public GameObject PiecePrefab;
 
 		private Dictionary<Piece, FN_Piece> pieceToGameObj = new Dictionary<Piece, FN_Piece>();
 
@@ -28,7 +33,7 @@ namespace Fitchneil.UnityLogic
 		{
 			//Spawn the effects for when a piece is captured.
 			Vector3 pos = Board.ToWorld(captured.CurrentPos.Value);
-			Instantiate(FN_Constants.Instance.PieceCaptureEffectsPrefab).transform.position = pos;
+			Instantiate(PieceCaptureEffectsPrefab).transform.position = pos;
 
 			//Destroy the GameObject for the piece.
 			Destroy(pieceToGameObj[captured].gameObject);

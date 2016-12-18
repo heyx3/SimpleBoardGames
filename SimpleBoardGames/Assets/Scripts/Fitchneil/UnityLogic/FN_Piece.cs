@@ -19,7 +19,7 @@ namespace Fitchneil.UnityLogic
 				var gameMode = BoardGames.UnityLogic.GameMode.GameMode<Vector2i>.Instance;
 				if (ToTrack.Owner.Value == gameMode.CurrentTurn.Value)
 				{
-					MovesUI.Instance.CurrentPiece = (Piece)ToTrack;
+					FN_MovesUI.Instance.CurrentPiece = (Piece)ToTrack;
 				}
 			};
 		}
@@ -36,13 +36,13 @@ namespace Fitchneil.UnityLogic
 				if (p.Owner.Value == Board.Player_Defender)
 				{
 					if (p.IsKing)
-						Spr.sprite = FN_Constants.Instance.Sprite_King;
+						Spr.sprite = FN_PieceDispatcher.Instance.Sprite_King;
 					else
-						Spr.sprite = FN_Constants.Instance.Sprite_Defender;
+						Spr.sprite = FN_PieceDispatcher.Instance.Sprite_Defender;
 				}
 				else
 				{
-					Spr.sprite = FN_Constants.Instance.Sprite_Attacker;
+					Spr.sprite = FN_PieceDispatcher.Instance.Sprite_Attacker;
 				}
 			}
 		}
@@ -62,10 +62,10 @@ namespace Fitchneil.UnityLogic
 			while (t < 1.0f)
 			{
 				MyTr.position = Vector3.Lerp(startPosWorld, endPosWorld,
-										     FN_Constants.Instance.PieceMovementCurve.Evaluate(t));
+										     FN_PieceDispatcher.Instance.PieceMovementCurve.Evaluate(t));
 
 				elapsedTime += Time.deltaTime;
-				t = elapsedTime / FN_Constants.Instance.PieceMovementTime;
+				t = elapsedTime / FN_PieceDispatcher.Instance.PieceMovementTime;
 
 				yield return null;
 			}
