@@ -1,23 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
-using Assert = UnityEngine.Assertions.Assert;
+using System.IO;
+using System.Linq;
 
 
 namespace TronsTour
 {
-	public class Board : BoardGames.Board<Piece, Vector2i, Movement>
+	public class Board : BoardGames.Board<Vector2i>
 	{
-		public Vector2i ToBoard(Vector3 worldPos)
-		{
-			return new Vector2i(Mathf.Clamp((int)worldPos.x, 0, Width - 1),
-								Mathf.Clamp((int)worldPos.y, 0, Height - 1));
-		}
-		public Vector3 ToWorld(Vector2i boardPos)
-		{
-			return new Vector3(boardPos.x + 0.5f, boardPos.y + 0.5f, 0.0f);
-		}
-
 		/// <summary>
 		/// Pieces move like a Knight in chess (2 steps along one axis, 1 step along another axis).
 		/// </summary>
@@ -30,103 +20,137 @@ namespace TronsTour
 		};
 
 
-		public int Width = 6,
-				   Height = 9;
-		public Piece[] Pieces = new Piece[2] { null, null };
+		/// <summary>
+		/// Raised when a tile becomes visited or un-visited.
+		/// The last argument is whether or not the tile was visited.
+		/// </summary>
+		public event System.Action<Board, Vector2i, bool> OnTileVisitedChanged;
+		public event System.Action<Board> OnBoardDeserialized;
 
+		public int Width { get { return visitedSpaces.GetLength(0); } }
+		public int Height { get { return visitedSpaces.GetLength(1); } }
 
+		private Piece piece1, piece2;
 		private bool[,] visitedSpaces;
-		private SpriteRenderer[,] spaceSprs;
 
 
-		protected override void Awake()
+		public Board(int width, int height)
 		{
-			base.Awake();
-
-			visitedSpaces = new bool[Width, Height];
-			spaceSprs = new SpriteRenderer[Width, Height];
-			for (int x = 0; x < Width; ++x)
-			{
-				for (int y = 0; y < Height; ++y)
-				{
+			//Create the board.
+			visitedSpaces = new bool[width, height];
+			for (int y = 0; y < Height; ++y)
+				for (int x = 0; x < Width; ++x)
 					visitedSpaces[x, y] = false;
-					spaceSprs[x, y] = null;
-				}
-			}
 
-			Assert.IsTrue(Pieces.Length == 2, "Must have exactly two pieces");
-		}
-		void Start()
-		{
-			//Create a sprite for each space.
-			for (int x = 0; x < Width; ++x)
+			//Create the pieces.
+			piece1 = new Piece(new Vector2i((Width - 1) / 2, 0), BoardGames.Players.One, this);
+			piece2 = new Piece(new Vector2i(Width / 2, Height - 1), BoardGames.Players.Two, this);
+
+			//Set up the pieces.
+			foreach (var piece in GetPieces())
 			{
-				for (int y = 0; y < Height; ++y)
+				visitedSpaces[piece.CurrentPos.Value.x, piece.CurrentPos.Value.y] = true;
+
+				piece.CurrentPos.OnChanged += (_piece, oldPos, newPos) =>
 				{
-					spaceSprs[x, y] = SpritePool.Instance.AllocateSprites(1,
-																		  Constants.Instance.OpenSpaceSprite,
-																		  1)[0];
-					spaceSprs[x, y].transform.position = new Vector3(x + 0.5f, y + 0.5f, 0.0f);
-				}
+					visitedSpaces[newPos.x, newPos.y] = true;
+
+					if (OnTileVisitedChanged != null)
+						OnTileVisitedChanged(this, newPos, true);
+				};
 			}
 
-			//Position the pieces.
-			Pieces[0].CurrentPos = new Vector2i((Width - 1) / 2, 0);
-			Pieces[1].CurrentPos = new Vector2i(Width / 2, Height - 1);
-			foreach (Piece p in Pieces)
+			//When a move is undone, undo the change to the "visitedSpaces" array.
+			OnUndoAction += (thisBoard, action) =>
 			{
-				p.transform.position = new Vector3(p.CurrentPos.x + 0.5f, p.CurrentPos.y + 0.5f, 0.0f);
+				Action_Move move = (Action_Move)action;
 
-				visitedSpaces[p.CurrentPos.x, p.CurrentPos.y] = true;
-				spaceSprs[p.CurrentPos.x, p.CurrentPos.y].sprite = Constants.Instance.ClosedSpaceSprite;
-			}
+				visitedSpaces[move.EndPos.x, move.EndPos.y] = false;
+
+				if (OnTileVisitedChanged != null)
+					OnTileVisitedChanged(this, move.EndPos, false);
+			};
+			
+			piece1.CurrentPos.OnChanged += Callback_PieceMoved;
+			piece2.CurrentPos.OnChanged += Callback_PieceMoved;
 		}
 
 
-		public override Piece GetPiece(Vector2i space)
+		public bool IsInBounds(Vector2i boardPos)
 		{
-			if (Pieces[0].CurrentPos == space)
-				return Pieces[0];
-			else if (Pieces[1].CurrentPos == space)
-				return Pieces[1];
-
-			return null;
+			return boardPos.x >= 0 && boardPos.x < Width &&
+				   boardPos.y >= 0 && boardPos.y < Height;
 		}
+		public bool WasVisited(Vector2i boardPos) { return visitedSpaces[boardPos.x, boardPos.y]; }
+
 		public Piece GetPiece(BoardGames.Players player)
 		{
-			return Pieces[(int)player];
+			switch (player)
+			{
+				case BoardGames.Players.One: return piece1;
+				case BoardGames.Players.Two: return piece2;
+				default: throw new NotImplementedException(player.ToString());
+			}
 		}
-		public override IEnumerable<Piece> GetPieces(BoardGames.Players team) { yield return GetPiece(team); }
+		public Piece GetPiece(Vector2i space)
+		{
+			if (space == piece1.CurrentPos.Value)
+				return piece1;
+			else if (space == piece2.CurrentPos.Value)
+				return piece2;
+			else
+				return null;
+		}
 
-		public override IEnumerable<Movement> GetMoves(Piece piece)
+		public override IEnumerable<BoardGames.Piece<Vector2i>> GetPieces()
+		{
+			yield return piece1;
+			yield return piece2;
+		}
+		public override IEnumerable<BoardGames.Action<Vector2i>> GetActions(BoardGames.Piece<Vector2i> piece)
 		{
 			//Get all possible spaces to move to and filter out the illegal ones.
 			foreach (Vector2i v in possibleMoves)
 			{
-				Movement mv = new Movement();
-				mv.Pos = piece.CurrentPos + v;
-				mv.IsMoving = piece;
-
-				if (mv.Pos.x >= 0 && mv.Pos.x < Width && mv.Pos.y >= 0 && mv.Pos.y < Height &&
-					!visitedSpaces[mv.Pos.x, mv.Pos.y])
-				{
-					yield return mv;
-				}
+				Action_Move move = new Action_Move(piece.CurrentPos.Value + v, (Piece)piece);
+				if (IsInBounds(move.EndPos) && !visitedSpaces[move.EndPos.x, move.EndPos.y])
+					yield return move;
 			}
 		}
 
-		public override void ApplyMove(Movement move)
+		public override void Serialize(BinaryWriter stream)
 		{
-			//Move the piece.
-			move.IsMoving.CurrentPos = move.Pos;
-			move.IsMoving.MyTr.position = new Vector3(move.Pos.x + 0.5f, move.Pos.y + 0.5f, 0.0f);
+			stream.Write(piece1.CurrentPos.Value.x);
+			stream.Write(piece1.CurrentPos.Value.y);
+			stream.Write(piece2.CurrentPos.Value.x);
+			stream.Write(piece2.CurrentPos.Value.y);
+			
+			stream.Write(Width);
+			stream.Write(Height);
+			for (int y = 0; y < Height; ++y)
+				for (int x = 0; x < Width; ++x)
+					stream.Write(visitedSpaces[x, y]);
+		}
+		public override void Deserialize(BinaryReader stream)
+		{
+			piece1.CurrentPos.Value = new Vector2i(stream.ReadInt32(), stream.ReadInt32());
+			piece2.CurrentPos.Value = new Vector2i(stream.ReadInt32(), stream.ReadInt32());
+			
+			visitedSpaces = new bool[stream.ReadInt32(), stream.ReadInt32()];
+			for (int y = 0; y < Height; ++y)
+				for (int x = 0; x < Width; ++x)
+					visitedSpaces[x, y] = stream.ReadBoolean();
 
-			//Close off the new position.
-			visitedSpaces[move.Pos.x, move.Pos.y] = true;
-			spaceSprs[move.Pos.x, move.Pos.y].sprite = Constants.Instance.ClosedSpaceSprite;
+			if (OnBoardDeserialized != null)
+				OnBoardDeserialized(this);
+		}
 
-			Instantiate(Constants.Instance.PlacePieceEffectPrefab).transform.position =
-				move.IsMoving.MyTr.position;
+		private void Callback_PieceMoved(BoardGames.Piece<Vector2i> thePiece,
+										 Vector2i oldPos, Vector2i newPos)
+		{
+			//If the other piece has no moves left, this piece just won.
+			if (GetActions(GetPiece(thePiece.Owner.Value.Switched())).Count() == 0)
+				FinishedGame(thePiece.Owner.Value);
 		}
 	}
 }
