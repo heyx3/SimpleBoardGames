@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BoardGames;
 using UnityEngine;
 using Assert = UnityEngine.Assertions.Assert;
 
@@ -39,18 +40,18 @@ namespace Fitchneil
 		///     2) The piece that was captured
 		///     3) The piece whose movement resulted in the capture.
 		/// </summary>
-		public event Action<Board, Piece, Piece> OnPieceCaptured;
+		public event System.Action<Board, Piece, Piece> OnPieceCaptured;
 		/// <summary>
 		/// Raised when a piece is added to the board.
 		/// This happens when a move that captures pieces is undone.
 		/// </summary>
-		public event Action<Board, Piece> OnPieceAdded;
+		public event System.Action<Board, Piece> OnPieceAdded;
 
 		/// <summary>
 		/// When this board deserializes a stream to read a new state,
 		///     all current pieces are thrown away and new pieces are put on the board.
 		/// </summary>
-		public event Action<Board> OnBoardDeserialized;
+		public event System.Action<Board> OnBoardDeserialized;
 
 
 		private Piece[,] theBoard;
@@ -70,8 +71,8 @@ namespace Fitchneil
 			int centerPos = (BoardSize / 2);
 
 			//King:
-			theBoard[centerPos, centerPos] =
-				new Piece(true, new Vector2i(centerPos, centerPos), Player_Defender, this);
+			Piece king = new Piece(true, new Vector2i(centerPos, centerPos), Player_Defender, this);
+			theBoard[centerPos, centerPos] = king;
 			//Defenders:
 			for (int i = 1; i <= 2; ++i)
 			{
@@ -113,6 +114,25 @@ namespace Fitchneil
 				theBoard[movement.EndPos.x, movement.EndPos.y] =
 					theBoard[movement.StartPos.x, movement.StartPos.y];
 				theBoard[movement.StartPos.x, movement.StartPos.y] = null;
+			};
+
+			//If the king is captured, the attackers win.
+			//If there are no attackers left, the defenders win.
+			OnPieceCaptured += (thisBoard, captured, capturer) =>
+			{
+				if (captured.IsKing)
+					FinishedGame(Player_Attacker);
+				else if (GetPieces(p => p.Owner.Value == Player_Attacker).Count() == 0)
+					FinishedGame(Player_Defender);
+			};
+			//If the king reaches the end of the board, the defenders win.
+			king.CurrentPos.OnChanged += (theKing, oldPos, newPos) =>
+			{
+				if (newPos.x == 0 || newPos.x == BoardSize - 1 ||
+				    newPos.y == 0 || newPos.y == BoardSize - 1)
+				{
+					FinishedGame(Player_Defender);
+				}
 			};
 		}
 
@@ -287,6 +307,7 @@ namespace Fitchneil
 
 			return caps;
 		}
+
 
 		/// <summary>
 		/// Removes the given piece from this board and raises the proper event.

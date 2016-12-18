@@ -8,6 +8,7 @@ using UnityEngine;
 //TODO: A "NetworkReplay" GameMode that just shows a single move for the player to watch.
 //TODO: A "NetworkPlay" GameMode that lets the player take the next move.
 
+
 namespace BoardGames.UnityLogic.GameMode
 {
 	/// <summary>
@@ -19,12 +20,6 @@ namespace BoardGames.UnityLogic.GameMode
 	public abstract class GameMode_Offline<LocationType> : GameMode<LocationType>
 		where LocationType : IEquatable<LocationType>
 	{
-		/// <summary>
-		/// Raised when one player wins, or possibly if there is a tie.
-		/// </summary>
-		public event Action<GameMode<LocationType>, Players?> OnPlayerWin;
-
-
 		/// <summary>
 		/// NOTE: This is the name of the game's save file,
 		///     so make sure it doesn't use any strange characters.
@@ -60,30 +55,28 @@ namespace BoardGames.UnityLogic.GameMode
 				if (!isGameEnding)
 					SaveGame(filePath);
 			};
-		}
 
-		protected void EndGame(Players? winner)
-		{
-			if (gameEndingCoroutine == null)
+			//When the game ends, wait a few seconds, then clear the save file.
+			TheBoard.OnGameFinished += (theBoard, winner) =>
 			{
-				//Clear the save file.
-				isGameEnding = true;
-				try
+				if (gameEndingCoroutine == null)
 				{
-					if (File.Exists(filePath))
-						File.Delete(filePath);
-				}
-				catch (Exception e)
-				{
-					Debug.LogError("Couldn't delete save file " + filePath +
-								       " (" + e.GetType().Name + "): " + e.Message);
-				}
+					//Clear the save file.
+					isGameEnding = true;
+					try
+					{
+						if (File.Exists(filePath))
+							File.Delete(filePath);
+					}
+					catch (Exception e)
+					{
+						Debug.LogError("Couldn't delete save file " + filePath +
+										   " (" + e.GetType().Name + "): " + e.Message);
+					}
 
-				gameEndingCoroutine = StartCoroutine(EndGameCoroutine());
-
-				if (OnPlayerWin != null)
-					OnPlayerWin(this, winner);
-			}
+					gameEndingCoroutine = StartCoroutine(EndGameCoroutine());
+				}
+			};
 		}
 
 		protected virtual System.Collections.IEnumerator EndGameCoroutine()

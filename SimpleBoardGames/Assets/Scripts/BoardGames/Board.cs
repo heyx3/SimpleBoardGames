@@ -14,6 +14,13 @@ namespace BoardGames
 								   BoardGames.Action<LocationType>> OnAction,
 																	OnUndoAction;
 
+		/// <summary>
+		/// Raised when the game is over.
+		/// The second parameter is the winner, or null if there was a tie.
+		/// </summary>
+		public event System.Action<Board<LocationType>, Players?> OnGameFinished;
+
+
 		public void DidAction(Action<LocationType> action)
 		{
 			if (OnAction != null)
@@ -23,6 +30,11 @@ namespace BoardGames
 		{
 			if (OnUndoAction != null)
 				OnUndoAction(this, action);
+		}
+		public void FinishedGame(Players? winner)
+		{
+			if (OnGameFinished != null)
+				OnGameFinished(this, winner);
 		}
 
 

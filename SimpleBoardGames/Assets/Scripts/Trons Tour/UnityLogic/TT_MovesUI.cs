@@ -33,10 +33,10 @@ namespace TronsTour.UnityLogic
 
 					//Set up the color and position of each sprite,
 					//    and let the user click them to select the movement.
-					Board board = (Board)currentPiece.TheBoard;
 					for (int i = 0; i < movements.Count; ++i)
 					{
-						activeSprites[i].transform.position = board.ToWorld(movements[i].EndPos);
+						activeSprites[i].transform.position =
+							TT_BoardDisplay.Instance.ToWorld(movements[i].EndPos);
 						AddMoveSelectionResponder(movements[i], activeSprites[i].gameObject);
 					}
 				}
@@ -55,7 +55,8 @@ namespace TronsTour.UnityLogic
 
 		private void AddMoveSelectionResponder(Action_Move move, GameObject go)
 		{
-			go.AddComponent<BoxCollider2D>();
+			var collider = go.AddComponent<BoxCollider2D>();
+			collider.size = Vector2.one;
 
 			var input = go.AddComponent<InputResponder>();
 			input.OnStopClick += (_input, mPos) =>

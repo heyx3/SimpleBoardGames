@@ -31,7 +31,7 @@ namespace TronsTour.UnityLogic
 			
 			if (newPiece != null)
 			{
-				MyTr.position = ((Board)newPiece.TheBoard).ToWorld(newPiece.CurrentPos);
+				MyTr.position = TT_BoardDisplay.Instance.ToWorld(newPiece.CurrentPos);
 
 				//Set the sprite based on what kind of piece this is.
 				switch (newPiece.Owner.Value)
@@ -50,10 +50,9 @@ namespace TronsTour.UnityLogic
 		protected override IEnumerator MovePieceCoroutine(Vector2i startPos, Vector2i endPos)
 		{
 			//Interpolate from the start pos to the end pos using a curve.
-
-			Board board = (Board)ToTrack.TheBoard;
-			Vector3 startPosWorld = board.ToWorld(startPos),
-					endPosWorld = board.ToWorld(endPos);
+			
+			Vector3 startPosWorld = TT_BoardDisplay.Instance.ToWorld(startPos),
+					endPosWorld = TT_BoardDisplay.Instance.ToWorld(endPos);
 
 			MyTr.position = startPosWorld;
 			yield return null;

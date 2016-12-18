@@ -22,11 +22,6 @@ namespace TronsTour.UnityLogic.GameMode
 		{
 			//Change turns.
 			CurrentTurn.Value = CurrentTurn.Value.Switched();
-
-			//If the current piece has no moves left, that player loses.
-			Board board = (Board)TheBoard;
-			if (board.GetActions(board.GetPiece(CurrentTurn)).Count() == 0)
-				EndGame(CurrentTurn.Value.Switched());
 		}
 
 		protected override void Awake()

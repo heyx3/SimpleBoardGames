@@ -63,7 +63,8 @@ namespace Fitchneil.UnityLogic
 
 		private void AddMoveSelectionResponder(Action_Move move, GameObject go)
 		{
-			go.AddComponent<BoxCollider2D>();
+			var collider = go.AddComponent<BoxCollider2D>();
+			collider.size = Vector2.one;
 
 			var input = go.AddComponent<InputResponder>();
 			input.OnStopClick += (_input, mPos) =>

@@ -16,7 +16,7 @@ namespace TronsTour.UnityLogic
 		public AnimationCurve PieceMovementCurve = AnimationCurve.EaseInOut(0.0f, 0.0f, 1.0f, 1.0f);
 		public float PieceMovementTime = 0.5f;
 
-
+		
 		public Board TheBoard { get; private set; }
 		
 		private TT_Piece piece1, piece2;
@@ -24,6 +24,16 @@ namespace TronsTour.UnityLogic
 
 		private Transform myTr;
 
+
+		public Vector2i ToBoard(Vector3 worldPos)
+		{
+			return new Vector2i(Mathf.Clamp((int)worldPos.x, 0, TheBoard.Width - 1),
+								Mathf.Clamp((int)worldPos.y, 0, TheBoard.Height - 1));
+		}
+		public Vector3 ToWorld(Vector2i boardPos)
+		{
+			return new Vector3(boardPos.x + 0.5f, boardPos.y + 0.5f, 0.0f);
+		}
 
 		protected override void Awake()
 		{
@@ -80,7 +90,7 @@ namespace TronsTour.UnityLogic
 															ClosedSpaceSprite :
 															OpenSpaceSprite);
 
-			Instantiate(PiecePlacementEffectsPrefab).transform.position = theBoard.ToWorld(tilePos);
+			Instantiate(PiecePlacementEffectsPrefab).transform.position = ToWorld(tilePos);
 		}
 
 		private Transform MakeTile(Vector2i tile)
@@ -88,7 +98,7 @@ namespace TronsTour.UnityLogic
 			GameObject go = new GameObject("Tile " + tile.ToString());
 
 			Transform tr = go.transform;
-			tr.position = TheBoard.ToWorld(tile);
+			tr.position = ToWorld(tile);
 
 			SpriteRenderer spr = go.AddComponent<SpriteRenderer>();
 			spr.sprite = OpenSpaceSprite;

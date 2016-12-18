@@ -26,27 +26,6 @@ namespace Fitchneil.UnityLogic.GameMode
 			base.Awake();
 
 			Screen.orientation = ScreenOrientation.Portrait;
-			
-			//If the king moves to the edge of the board, the defenders win.
-			var kingPiece = TheBoard.GetPieces().First(p => ((Piece)p).IsKing);
-			kingPiece.CurrentPos.OnChanged += (_kingPiece, oldPos, newPos) =>
-			{
-				if (newPos.x == 0 || newPos.x == Board.BoardSize - 1 ||
-					newPos.y == 0 || newPos.y == Board.BoardSize - 1)
-				{
-					EndGame(Board.Player_Defender);
-				}
-			};
-
-			//If the king is captured, the attackers win.
-			//If all attackers are captured, the defenders win.
-			((Board)TheBoard).OnPieceCaptured += (theBoard, captured, capturer) =>
-			{
-				if (captured.IsKing)
-					EndGame(Board.Player_Attacker);
-				else if (theBoard.GetPieces(p => p.Owner.Value == Board.Player_Attacker).Count() == 0)
-					EndGame(Board.Player_Defender);
-			};
 		}
 	}
 }

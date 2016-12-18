@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using BoardGames;
-using UnityEngine;
-using Assert = UnityEngine.Assertions.Assert;
+using System.Linq;
 
 
 namespace TronsTour
@@ -72,18 +70,11 @@ namespace TronsTour
 				if (OnTileVisitedChanged != null)
 					OnTileVisitedChanged(this, move.EndPos, false);
 			};
+			
+			piece1.CurrentPos.OnChanged += Callback_PieceMoved;
+			piece2.CurrentPos.OnChanged += Callback_PieceMoved;
 		}
 
-
-		public Vector2i ToBoard(Vector3 worldPos)
-		{
-			return new Vector2i(Mathf.Clamp((int)worldPos.x, 0, Width - 1),
-								Mathf.Clamp((int)worldPos.y, 0, Height - 1));
-		}
-		public Vector3 ToWorld(Vector2i boardPos)
-		{
-			return new Vector3(boardPos.x + 0.5f, boardPos.y + 0.5f, 0.0f);
-		}
 
 		public bool IsInBounds(Vector2i boardPos)
 		{
@@ -111,13 +102,12 @@ namespace TronsTour
 				return null;
 		}
 
-		public override IEnumerable<Piece<Vector2i>> GetPieces()
+		public override IEnumerable<BoardGames.Piece<Vector2i>> GetPieces()
 		{
 			yield return piece1;
 			yield return piece2;
 		}
-
-		public override IEnumerable<BoardGames.Action<Vector2i>> GetActions(Piece<Vector2i> piece)
+		public override IEnumerable<BoardGames.Action<Vector2i>> GetActions(BoardGames.Piece<Vector2i> piece)
 		{
 			//Get all possible spaces to move to and filter out the illegal ones.
 			foreach (Vector2i v in possibleMoves)
@@ -153,6 +143,14 @@ namespace TronsTour
 
 			if (OnBoardDeserialized != null)
 				OnBoardDeserialized(this);
+		}
+
+		private void Callback_PieceMoved(BoardGames.Piece<Vector2i> thePiece,
+										 Vector2i oldPos, Vector2i newPos)
+		{
+			//If the other piece has no moves left, this piece just won.
+			if (GetActions(GetPiece(thePiece.Owner.Value.Switched())).Count() == 0)
+				FinishedGame(thePiece.Owner.Value);
 		}
 	}
 }

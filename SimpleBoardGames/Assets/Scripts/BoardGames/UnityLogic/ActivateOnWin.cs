@@ -15,7 +15,7 @@ namespace BoardGames.UnityLogic
 
 			if (gameMode is GameMode.GameMode_Offline<LocationType>)
 			{
-				((GameMode.GameMode_Offline<LocationType>)gameMode).OnPlayerWin +=
+				gameMode.TheBoard.OnGameFinished +=
 					(board, player) =>
 					{
 						gameObject.SetActive(ShouldActivate(player));
