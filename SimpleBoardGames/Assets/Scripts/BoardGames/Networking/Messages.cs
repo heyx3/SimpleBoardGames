@@ -38,8 +38,9 @@ namespace BoardGames.Networking.Messages
 		public static IPEndPoint Deserialize(BinaryReader reader)
 		{
 			int nBytes = reader.ReadInt32();
-			return new IPEndPoint(new IPAddress(reader.ReadBytes(reader.ReadInt32())),
-								  reader.ReadInt32());
+			byte[] ipBytes = reader.ReadBytes(nBytes);
+			int port = reader.ReadInt32();
+			return new IPEndPoint(new IPAddress(ipBytes), port);
 		}
 	}
 
