@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 
@@ -65,6 +66,43 @@ namespace Fitchneil
 				board.PlacePiece(piece);
 
 			base.UndoAction();
+		}
+
+		public override void Serialize(BinaryWriter stream)
+		{
+			//Write the piece that is moving, using its position.
+			stream.Write((Int32)ThePiece.CurrentPos.Value.x);
+			stream.Write((Int32)ThePiece.CurrentPos.Value.y);
+
+			stream.Write((Int32)StartPos.x);
+			stream.Write((Int32)StartPos.y);
+			stream.Write((Int32)EndPos.x);
+			stream.Write((Int32)EndPos.y);
+
+			//Write the pieces that will be captured, using their position.
+			stream.Write((Int32)NCaptures);
+			foreach (var piece in captures)
+			{
+				stream.Write((Int32)piece.CurrentPos.Value.x);
+				stream.Write((Int32)piece.CurrentPos.Value.y);
+			}
+		}
+		public override void Deserialize(BinaryReader stream)
+		{
+			Board myBoard = (Board)TheBoard;
+
+			ThePiece = myBoard.GetPiece(new Vector2i(stream.ReadInt32(), stream.ReadInt32()));
+
+			StartPos = new Vector2i(stream.ReadInt32(), stream.ReadInt32());
+			EndPos = new Vector2i(stream.ReadInt32(), stream.ReadInt32());
+
+			captures.Clear();
+			int nCaps = stream.ReadInt32();
+			for (int i = 0; i < nCaps; ++i)
+			{
+				captures.Add(myBoard.GetPiece(new Vector2i(stream.ReadInt32(),
+														   stream.ReadInt32())));
+			}
 		}
 	}
 }

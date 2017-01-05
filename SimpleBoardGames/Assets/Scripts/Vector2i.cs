@@ -52,6 +52,10 @@ public struct Vector2i : IEquatable<Vector2i>
 			y2 = y - other.y;
 		return (x2 * x2) + (y2 * y2);
 	}
+	public int ManhattanDistance(Vector2i other)
+	{
+		return Math.Abs(x - other.x) + Math.Abs(y - other.y);
+	}
 
 
 	public override string ToString()
