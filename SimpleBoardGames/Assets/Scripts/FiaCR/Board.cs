@@ -63,6 +63,10 @@ namespace FiaCR
 		/// Raised when a host has been added to this board.
 		/// </summary>
 		public event System.Action<Board, Vector2i, BoardGames.Players> OnHostCreated;
+		/// <summary>
+		/// Raised when a host has been removed from this board.
+		/// </summary>
+		public event System.Action<Board, Vector2i, BoardGames.Players> OnHostDestroyed;
 		
 		//TODO: Move "OnBoardDeserialized" to the base class's Deserialize() implementation.
 		/// <summary>
@@ -187,6 +191,20 @@ namespace FiaCR
 			else
 				return null;
 		}
+		public void AddHost(Vector2i tilePos, BoardGames.Players team)
+		{
+			hostsByPos.Add(tilePos, team);
+			if (OnHostCreated != null)
+				OnHostCreated(this, tilePos, team);
+		}
+		public void RemoveHost(Vector2i tilePos)
+		{
+			var team = hostsByPos[tilePos];
+			hostsByPos.Remove(tilePos);
+
+			if (OnHostDestroyed != null)
+				OnHostDestroyed(this, tilePos, team);
+		}
 
 		public override IEnumerable<BoardGames.Action<Vector2i>> GetActions(Players player)
 		{
@@ -196,10 +214,9 @@ namespace FiaCR
 					for (pos.x = 0; pos.x < (int)size; ++pos.x)
 						if (GetPiece(pos) == null)
 						{
-							yield return new Action_PlaceFriendly(pos,
-																  GetCapturesFrom(pos, Player_Humans,
-																				  null),
-																  this);
+							yield return new Action_PlaceFriendly(pos, this,
+																  GetCapturesFrom(pos, Player_Humans),
+																  GetBlockCompletionFrom(pos, Player_Humans));
 						}
 			}
 
@@ -209,7 +226,39 @@ namespace FiaCR
 		{
 			if (piece.Owner.Value == Player_Humans)
 			{
-				throw new NotImplementedException("Billy's moves"); //TODO
+				//Breadth-first search up to two hops away.
+				//Store a "hop" as the current position, and the number of hops left.
+				Queue<KeyValuePair<Vector2i, int>> hopsToCheck = new Queue<KeyValuePair<Vector2i, int>>();
+				HashSet<Vector2i> alreadyChecked = new HashSet<Vector2i>();
+				hopsToCheck.Enqueue(new KeyValuePair<Vector2i, int>(piece.CurrentPos, 2));
+				alreadyChecked.Add(piece.CurrentPos);
+				while (hopsToCheck.Count > 0)
+				{
+					var hop = hopsToCheck.Dequeue();
+					alreadyChecked.Add(hop.Key);
+
+					if (GetPiece(hop.Key) == null)
+						yield return new Action_Move((Piece)piece, hop.Key,
+													 GetCapturesFrom(hop.Key, piece.Owner),
+													 GetBlockCompletionFrom(hop.Key, piece.Owner));
+
+					//Make more hops.
+					if (hop.Value > 0)
+					{
+						Vector2i nextPos = hop.Key.LessX;
+						if (IsInBounds(nextPos) && GetPiece(nextPos) == null && !alreadyChecked.Contains(nextPos))
+							hopsToCheck.Enqueue(new KeyValuePair<Vector2i, int>(nextPos, hop.Value - 1));
+						nextPos = hop.Key.LessY;
+						if (IsInBounds(nextPos) && GetPiece(nextPos) == null && !alreadyChecked.Contains(nextPos))
+							hopsToCheck.Enqueue(new KeyValuePair<Vector2i, int>(nextPos, hop.Value - 1));
+						nextPos = hop.Key.MoreX;
+						if (IsInBounds(nextPos) && GetPiece(nextPos) == null && !alreadyChecked.Contains(nextPos))
+							hopsToCheck.Enqueue(new KeyValuePair<Vector2i, int>(nextPos, hop.Value - 1));
+						nextPos = hop.Key.MoreY;
+						if (IsInBounds(nextPos) && GetPiece(nextPos) == null && !alreadyChecked.Contains(nextPos))
+							hopsToCheck.Enqueue(new KeyValuePair<Vector2i, int>(nextPos, hop.Value - 1));
+					}
+				}
 			}
 			else
 			{
@@ -217,29 +266,29 @@ namespace FiaCR
 				if (IsInBounds(newPos) && GetPiece(newPos) == null)
 				{
 					yield return new Action_Move((Piece)piece, newPos,
-												 GetCapturesFrom(newPos, Player_TC,
-																 piece.CurrentPos));
+												 GetCapturesFrom(newPos, Player_TC),
+												 GetBlockCompletionFrom(newPos, Player_TC));
 				}
 				newPos = piece.CurrentPos.Value.LessY;
 				if (IsInBounds(newPos) && GetPiece(newPos) == null)
 				{
 					yield return new Action_Move((Piece)piece, newPos,
-												 GetCapturesFrom(newPos, Player_TC,
-																 piece.CurrentPos));
+												 GetCapturesFrom(newPos, Player_TC),
+												 GetBlockCompletionFrom(newPos, Player_TC));
 				}
 				newPos = piece.CurrentPos.Value.MoreX;
 				if (IsInBounds(newPos) && GetPiece(newPos) == null)
 				{
 					yield return new Action_Move((Piece)piece, newPos,
-												 GetCapturesFrom(newPos, Player_TC,
-																 piece.CurrentPos));
+												 GetCapturesFrom(newPos, Player_TC),
+												 GetBlockCompletionFrom(newPos, Player_TC));
 				}
 				newPos = piece.CurrentPos.Value.MoreY;
 				if (IsInBounds(newPos) && GetPiece(newPos) == null)
 				{
 					yield return new Action_Move((Piece)piece, newPos,
-												 GetCapturesFrom(newPos, Player_TC,
-																 piece.CurrentPos));
+												 GetCapturesFrom(newPos, Player_TC),
+												 GetBlockCompletionFrom(newPos, Player_TC));
 				}
 			}
 		}
@@ -398,13 +447,76 @@ namespace FiaCR
 		/// </summary>
 		/// <param name="piecePos">The new position of the piece.</param>
 		/// <param name="team">The piece's owner.</param>
-		/// <param name="prevPos">
-		/// The piece's previous position, if it's being moved instead of placed.
-		/// </param>
-		private HashSet<Piece> GetCapturesFrom(Vector2i piecePos, BoardGames.Players team,
-											   Vector2i? prevPos)
+		private HashSet<Piece> GetCapturesFrom(Vector2i piecePos, BoardGames.Players team)
 		{
-			//TODO: Implement.
+			HashSet<Piece> caps = new HashSet<Piece>();
+			BoardGames.Players enemyTeam = team.Switched();
+			
+			//Check all orthogonal directions away from the piece to find a line of enemies.
+			for (int i = 0; i < 4; ++i)
+			{
+				Vector2i dir = new Vector2i();
+				switch (i)
+				{
+					case 0: dir = new Vector2i(-1, 0); break;
+					case 1: dir = new Vector2i(1, 0); break;
+					case 2: dir = new Vector2i(0, -1); break;
+					case 3: dir = new Vector2i(0, 1); break;
+				}
+
+				//If there is a line of one or more enemies, followed by a friendly piece,
+				//    then this is a capture.
+				Vector2i lineStart = piecePos + dir;
+				if (IsPieceAt(piecePos + dir, enemyTeam))
+				{
+					Vector2i lineEnd = GetLineEnd(lineStart, dir);
+					if (IsPieceAt(lineEnd + dir, team))
+					{
+						for (Vector2i enemyPos = lineStart; enemyPos != (lineEnd + dir); enemyPos += dir)
+							caps.Add(GetPiece(enemyPos));
+					}
+				}
+			}
+
+			return caps;
+		}
+		private Vector2i GetLineEnd(Vector2i lineStart, Vector2i lineDir)
+		{
+			BoardGames.Players team = GetPiece(lineStart).Owner;
+			Vector2i linePos = lineStart;
+			while (IsPieceAt(linePos + lineDir, team))
+				linePos += lineDir;
+
+			return linePos;
+		}
+		private bool IsPieceAt(Vector2i pos, BoardGames.Players team)
+		{
+			return IsInBounds(pos) && GetPiece(pos) != null && GetPiece(pos).Owner.Value == team;
+		}
+
+		/// <summary>
+		/// Gets any 3x3 block of ally pieces made by placing/moving a piece to a position.
+		/// </summary>
+		private Vector2i? GetBlockCompletionFrom(Vector2i piecePos, BoardGames.Players team)
+		{
+			//Try every single possible 3x3 square the piece can be a part of.
+			for (int yMin = piecePos.y - 2; yMin <= piecePos.y; ++yMin)
+				for (int xMin = piecePos.x - 2; xMin <= piecePos.x; ++xMin)
+					if (IsBlockOf(team, piecePos, new Vector2i(xMin, yMin)))
+						return new Vector2i(xMin, yMin);
+			return null;
+		}
+		private bool IsBlockOf(BoardGames.Players team, Vector2i exception, Vector2i min)
+		{
+			for (int y = 0; y < 3; ++y)
+				for (int x = 0; x < 3; ++x)
+				{
+					Vector2i pos = new Vector2i(x, y);
+					if (!IsInBounds(pos) || GetPiece(pos) == null || GetPiece(pos).Owner.Value != team)
+						return false;
+				}
+
+			return true;
 		}
 	}
 }

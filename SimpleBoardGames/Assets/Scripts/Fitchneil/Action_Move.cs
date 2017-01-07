@@ -45,27 +45,27 @@ namespace Fitchneil
 					 EndPos.y == 0 || EndPos.y == Board.BoardSize - 1));
 		}
 
-		public override void DoAction()
+		protected override void Action_Do()
 		{
+			base.Action_Do();
+
 			ThePiece.CurrentPos.Value = EndPos;
 
 			//Capture pieces.
 			Board board = (Board)TheBoard;
 			foreach (Piece piece in captures)
 				board.CapturePiece(piece, ThePiece);
-
-			base.DoAction();
 		}
-		public override void UndoAction()
+		protected override void Action_Undo()
 		{
+			base.Action_Undo();
+
 			ThePiece.CurrentPos.Value = StartPos;
 
 			//Put back every piece that was captured.
 			Board board = (Board)TheBoard;
 			foreach (Piece piece in captures)
 				board.PlacePiece(piece);
-
-			base.UndoAction();
 		}
 
 		public override void Serialize(BinaryWriter stream)

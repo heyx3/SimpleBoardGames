@@ -17,31 +17,32 @@ namespace FiaCR
 		protected override Players Team {  get { return ToMove.Owner; } }
 
 
-		public Action_Move(Piece toMove, Vector2i newPos, HashSet<Piece> captures)
-			: base(captures, (Board)toMove.TheBoard)
+		public Action_Move(Piece toMove, Vector2i newPos,
+						   HashSet<Piece> captures, Vector2i? hostBlockMinCorner)
+			: base(captures, hostBlockMinCorner, (Board)toMove.TheBoard)
 		{
 			ToMove = toMove;
 			NewPos = newPos;
 		}
 
 
-		public override void DoAction()
+		protected override void Action_Do()
 		{
+			base.Action_Do();
+
 			oldPos = ToMove.CurrentPos;
 			movedOffHost = ((Board)TheBoard).GetHost(oldPos).HasValue;
 
 			ToMove.CurrentPos.Value = NewPos;
-
-			base.DoAction();
 		}
-		public override void UndoAction()
+		protected override void Action_Undo()
 		{
+			base.Action_Undo();
+
 			if (movedOffHost)
 				((Board)TheBoard).RemovePiece(oldPos);
 
 			ToMove.CurrentPos.Value = oldPos;
-
-			base.UndoAction();
 		}
 
 		public override void Serialize(BinaryWriter stream)

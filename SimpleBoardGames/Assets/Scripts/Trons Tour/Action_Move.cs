@@ -20,15 +20,15 @@ namespace TronsTour
 		}
 
 
-		public override void DoAction()
+		protected override void Action_Do()
 		{
+			base.Action_Do();
 			ThePiece.CurrentPos.Value = EndPos;
-			base.DoAction();
 		}
-		public override void UndoAction()
+		protected override void Action_Undo()
 		{
+			base.Action_Undo();
 			ThePiece.CurrentPos.Value = StartPos;
-			base.UndoAction();
 		}
 
 		public override void Serialize(BinaryWriter stream)
