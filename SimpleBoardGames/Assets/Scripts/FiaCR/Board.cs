@@ -16,9 +16,9 @@ namespace FiaCR
 		public enum Sizes
 		{
 			SixBySix = 6,
-			SevenBySeven,
-			EightByEight,
-			NineByNine,
+			SevenBySeven = 7,
+			EightByEight = 8,
+			NineByNine = 9,
 		}
 
 		#region Design constants
@@ -46,6 +46,14 @@ namespace FiaCR
 				{ Sizes.SevenBySeven, 6 },
 				{ Sizes.EightByEight, 8 },
 				{ Sizes.NineByNine, 10 },
+			};
+		public static readonly Dictionary<Sizes, float> ChanceCurseMoveByBoardSize =
+			new Dictionary<Sizes, float>()
+			{
+				{ Sizes.SixBySix, 0.85f },
+				{ Sizes.SevenBySeven, 0.75f },
+				{ Sizes.EightByEight, 0.65f },
+				{ Sizes.NineByNine, 0.55f },
 			};
 
 		#endregion

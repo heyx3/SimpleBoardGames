@@ -23,6 +23,10 @@ public class MainMenuController : MonoBehaviour
 	{
 		UnityEngine.SceneManagement.SceneManager.LoadScene("TronsTour");
 	}
+	public void OnButton_FiaCR()
+	{
+		UnityEngine.SceneManagement.SceneManager.LoadScene("FiaCR");
+	}
 	public void OnButton_Server()
 	{
 		UnityEngine.SceneManagement.SceneManager.LoadScene("Server");
