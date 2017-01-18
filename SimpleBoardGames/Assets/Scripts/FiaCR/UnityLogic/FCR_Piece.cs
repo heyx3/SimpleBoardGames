@@ -22,7 +22,7 @@ namespace FiaCR.UnityLogic
 					gameMode.CurrentTurn.Value == Board.Player_Humans &&
 					!gameMode.IsJuliaTurn)
 				{
-					//TODO: Show moves.
+					FCR_MovesUI_Billy.Instance.CurrentPiece = (Piece)ToTrack;
 				}
 			};
 

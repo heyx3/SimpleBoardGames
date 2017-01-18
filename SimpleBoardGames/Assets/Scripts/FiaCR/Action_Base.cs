@@ -8,8 +8,6 @@ namespace FiaCR
 {
 	public abstract class Action_Base : BoardGames.Action<Vector2i>
 	{
-		//TODO: Also store the 3x3 block this piece may complete to create a host.
-
 		public int NCaptures { get { return captures.Count; } }
 		public IEnumerable<Piece> Captures { get { return captures; } }
 		private HashSet<Piece> captures;
@@ -19,6 +17,15 @@ namespace FiaCR
 		/// </summary>
 		public Vector2i? HostBlockMinCorner { get; private set; }
 
+
+		public bool IsSpecial
+		{
+			get
+			{
+				return NCaptures > 0 ||
+					   HostBlockMinCorner.HasValue;
+			}
+		}
 
 		protected abstract BoardGames.Players Team { get; }
 
