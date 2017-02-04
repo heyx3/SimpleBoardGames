@@ -14,20 +14,19 @@ namespace FiaCR.UnityLogic
 		{
 			var gameMode = (GameMode.FCR_Game_Offline)GameMode.FCR_Game_Offline.Instance;
 
-			gameMode.CurrentTurn.OnChanged += Callback_NewTurn;
-			Callback_NewTurn(gameMode, gameMode.CurrentTurn, gameMode.CurrentTurn);
+			gameMode.OnTurnChanged += Callback_NewTurn;
+			Callback_NewTurn(gameMode);
 		}
-		private void Callback_NewTurn(BoardGames.UnityLogic.GameMode.GameMode<Vector2i> _gameMode,
-									  BoardGames.Players oldTurn, BoardGames.Players newTurn)
+		private void Callback_NewTurn(GameMode.FCR_Game_Offline gameMode)
 		{
-			var gameMode = (GameMode.FCR_Game_Offline)_gameMode;
-
-			if (newTurn == Board.Player_Humans && gameMode.IsJuliaTurn)
+			if (gameMode.CurrentTurn == Board.Player_Humans && gameMode.IsJuliaTurn)
 				gameObject.SetActive(ActivateOnJulia);
-			else if (newTurn == Board.Player_Humans && !gameMode.IsJuliaTurn)
+			else if (gameMode.CurrentTurn == Board.Player_Humans && !gameMode.IsJuliaTurn)
 				gameObject.SetActive(ActivateOnBilly);
-			else if (newTurn == Board.Player_TC)
+			else if (gameMode.CurrentTurn == Board.Player_TC)
 				gameObject.SetActive(ActivateOnCursed);
+			else
+				Debug.LogError("Unknown turn value " + gameMode.CurrentTurn.Value.ToString());
 		}
 	}
 }

@@ -13,10 +13,17 @@ namespace FiaCR.UnityLogic.GameMode
 									  PlayerPrefs_Seed = "FiaCR_Seed";
 
 
+		/// <summary>
+		/// A custom event for turn changing
+		///     because of the weirdness introduced by having three "players".
+		/// </summary>
+		public event System.Action<FCR_Game_Offline> OnTurnChanged;
+
 		public float CursedPieceWaitTime = 0.5f;
 
 		public Sprite GridCellSprite;
 		public ScaleCameraToFit CameraScaler;
+		public float CameraScalerVerticalBorder = 1.0f;
 
 		private List<SpriteRenderer> gridCells = null;
 
@@ -25,7 +32,7 @@ namespace FiaCR.UnityLogic.GameMode
 		public System.Random RNG { get; private set; }
 		
 		public bool IsJuliaTurn { get; private set; }
-		public uint MovesLeft { get; private set; }
+		public Stat<uint, FCR_Game_Offline> MovesLeft { get; private set; }
 
 		protected override string GameName { get { return "FiaCR"; } }
 
@@ -33,7 +40,8 @@ namespace FiaCR.UnityLogic.GameMode
 		protected override Board<Vector2i> CreateNewBoard()
 		{
 			int size = (int)Size;
-			CameraScaler.RegionToFit = new Rect(0.0f, 0.0f, size, size);
+			CameraScaler.RegionToFit = new Rect(0.0f, -CameraScalerVerticalBorder,
+												size, size + (2.0f * CameraScalerVerticalBorder));
 			StartCoroutine(RunBoardGridCreation());
 
 			return new Board(Size, RNG.Next());
@@ -44,17 +52,17 @@ namespace FiaCR.UnityLogic.GameMode
 			{
 				if (IsJuliaTurn)
 				{
-					if (MovesLeft == 0)
+					if (MovesLeft.Value <= 1)
 						AdvanceTurn();
 					else
-						MovesLeft -= 1;
+						MovesLeft.Value -= 1;
 				}
 				else
 				{
-					if (MovesLeft == 0)
+					if (MovesLeft.Value <= 1)
 						AdvanceTurn();
 					else
-						MovesLeft -= 1;
+						MovesLeft.Value -= 1;
 				}
 			}
 			else
@@ -84,7 +92,7 @@ namespace FiaCR.UnityLogic.GameMode
 				if (IsJuliaTurn)
 				{
 					IsJuliaTurn = false;
-					MovesLeft = Board.NBillyMovesByBoardSize[Size];
+					MovesLeft.Value = Board.NBillyMovesByBoardSize[Size];
 					FCR_MovesUI_Julia.Instance.DeInit();
 				}
 				else
@@ -96,18 +104,17 @@ namespace FiaCR.UnityLogic.GameMode
 			else
 			{
 				IsJuliaTurn = true;
-				MovesLeft = Board.NJuliaMovesByBoardSize[Size];
+				MovesLeft.Value = Board.NJuliaMovesByBoardSize[Size];
 				CurrentTurn.Value = Board.Player_Humans;
 				FCR_MovesUI_Julia.Instance.Init();
 			}
+
+			if (OnTurnChanged != null)
+				OnTurnChanged(this);
 		}
 
 		private System.Collections.IEnumerator RunCurseTurn()
 		{
-			HashSet<Piece> cursedPieces = new HashSet<Piece>(
-				TheBoard.GetPieces(piece => piece.Owner.Value == Board.Player_TC)
-						.Cast<Piece>());
-
 			Board board = (Board)TheBoard;
 			foreach (Piece p in TheBoard.GetPieces(piece => piece.Owner.Value == Board.Player_TC)
 										.Cast<Piece>())
@@ -132,6 +139,8 @@ namespace FiaCR.UnityLogic.GameMode
 													   UnityEngine.Random.Range(0, int.MaxValue)));
 
 			Screen.orientation = ScreenOrientation.Portrait;
+
+			MovesLeft = new Stat<uint, FCR_Game_Offline>(this, 0);
 
 			base.Awake();
 		}

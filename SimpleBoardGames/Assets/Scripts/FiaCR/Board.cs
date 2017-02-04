@@ -395,6 +395,7 @@ namespace FiaCR
 			
 			pieces[newPos.x, newPos.y] = (Piece)piece;
 
+			//If this was a cursed piece, see if The Curse just won.
 			if (piece.Owner.Value == Player_TC)
 				CheckTCWin();
 		}

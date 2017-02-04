@@ -24,7 +24,9 @@ namespace FiaCR
 		protected override void Action_Do()
 		{
 			base.Action_Do();
-			((Board)TheBoard).AddPiece(new Piece(Pos, Board.Player_Humans, (Board)TheBoard));
+
+			Board theBoard = (Board)TheBoard;
+			theBoard.AddPiece(new Piece(Pos, Board.Player_Humans, theBoard));
 		}
 		protected override void Action_Undo()
 		{

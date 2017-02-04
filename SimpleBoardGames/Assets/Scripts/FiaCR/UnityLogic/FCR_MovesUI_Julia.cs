@@ -6,8 +6,6 @@ using UnityEngine;
 
 namespace FiaCR.UnityLogic
 {
-	//TODO: Limit the number of moves. Show in UI.
-
 	public class FCR_MovesUI_Julia : Singleton<FCR_MovesUI_Julia>
 	{
 		public Sprite MoveOptionSprite;
