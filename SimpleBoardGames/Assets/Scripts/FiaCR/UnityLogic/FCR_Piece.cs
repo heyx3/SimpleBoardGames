@@ -7,8 +7,13 @@ using UnityEngine;
 
 namespace FiaCR.UnityLogic
 {
+	//TODO: Indicate when friendly pieces have already been moved this turn.
+
 	public class FCR_Piece : BoardGames.UnityLogic.PieceRenderer<Vector2i>
 	{
+		public GameObject Child_Friendly, Child_Cursed;
+
+
 		protected override void Awake()
 		{
 			base.Awake();
@@ -26,6 +31,8 @@ namespace FiaCR.UnityLogic
 				}
 			};
 
+			Child_Friendly.SetActive(false);
+			Child_Cursed.SetActive(false);
 		}
 		private void Start()
 		{
@@ -48,11 +55,8 @@ namespace FiaCR.UnityLogic
 			//Set the sprite.
 			if (newPiece != null)
 			{
-				Piece p = (Piece)newPiece;
-				if (p.Owner.Value == Board.Player_Humans)
-					Spr.sprite = FCR_PieceDispatcher.Instance.Sprite_Friendly;
-				else
-					Spr.sprite = FCR_PieceDispatcher.Instance.Sprite_Cursed;
+				Child_Friendly.SetActive(newPiece.Owner.Value == Board.Player_Humans);
+				Child_Cursed.SetActive(newPiece.Owner.Value == Board.Player_TC);
 			}
 		}
 

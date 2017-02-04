@@ -93,6 +93,8 @@ namespace FiaCR
 
 		public Sizes Size { get { return size; } }
 
+		public IEnumerable<Vector2i> Hosts { get { return hostsByPos.Keys; } }
+
 
 		public Board(Sizes _size, int _seed)
 		{

@@ -8,7 +8,6 @@ namespace FiaCR.UnityLogic
 {
 	public class FCR_PieceDispatcher : Singleton<FCR_PieceDispatcher>
 	{
-		public Sprite Sprite_Cursed, Sprite_Friendly;
 		public GameObject PiecePrefab, PieceCaptureEffectsPrefab;
 
 		public AnimationCurve PieceMovementCurve = AnimationCurve.EaseInOut(0.0f, 0.0f, 1.0f, 1.0f);
