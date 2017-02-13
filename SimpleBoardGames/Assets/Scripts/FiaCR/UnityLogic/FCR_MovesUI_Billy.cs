@@ -19,7 +19,8 @@ namespace FiaCR.UnityLogic
 			{
 				if (currentPiece != null)
 				{
-					SpritePool.Instance.DeallocateSprites(activeSprites);
+					if (SpritePool.Instance != null)
+						SpritePool.Instance.DeallocateSprites(activeSprites);
 					activeSprites.Clear();
 				}
 

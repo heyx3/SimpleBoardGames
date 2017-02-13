@@ -13,10 +13,17 @@ namespace FiaCR.UnityLogic
 		public AnimationCurve PieceMovementCurve = AnimationCurve.EaseInOut(0.0f, 0.0f, 1.0f, 1.0f);
 		public float PieceMovementTime = 0.5f;
 
+		private Dictionary<Piece, FCR_Piece> pieceToGameObj = new Dictionary<Piece, FCR_Piece>();
+
+		/// <summary>
+		/// Once pieces in this list get an FCR_Piece object created for them,
+		///     they will start out tired.
+		/// </summary>
+		public HashSet<Piece> PiecesToStartTiredOut = new HashSet<Piece>();
 
 		public Board TheBoard { get; private set; }
-
-		private Dictionary<Piece, FCR_Piece> pieceToGameObj = new Dictionary<Piece, FCR_Piece>();
+		public IEnumerable<FCR_Piece> Pieces { get { return pieceToGameObj.Values; } }
+		public FCR_Piece GetPiece(Piece gamePiece) { return pieceToGameObj[gamePiece]; }
 
 
 		private void Start()

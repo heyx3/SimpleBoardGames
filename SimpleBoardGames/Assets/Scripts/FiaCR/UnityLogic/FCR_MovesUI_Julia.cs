@@ -32,11 +32,16 @@ namespace FiaCR.UnityLogic
 
 				AddPlaceSelectionResponder(placements[i], activeSprites[i].gameObject);
 			}
+
+			board.OnPieceRemoved += Callback_PieceRemoved;
 		}
 		public void DeInit()
 		{
 			SpritePool.Instance.DeallocateSprites(activeSprites);
 			activeSprites.Clear();
+
+			var board = (Board)GameMode.FCR_Game_Offline.Instance.TheBoard;
+			board.OnPieceRemoved -= Callback_PieceRemoved;
 		}
 		
 		private List<SpriteRenderer> activeSprites = new List<SpriteRenderer>();
@@ -55,8 +60,20 @@ namespace FiaCR.UnityLogic
 			var input = go.AddComponent<InputResponder>();
 			input.OnStopClick += (_input, mPos) =>
 			{
+				//Remove the option to place something else here.
+				int index = activeSprites.IndexOf(go.GetComponentInChildren<SpriteRenderer>());
+				SpritePool.Instance.DeallocateSprites(new List<SpriteRenderer>() { activeSprites[index] });
+				activeSprites.RemoveAt(index);
+
 				placement.DoAction();
 			};
+		}
+
+		private void Callback_PieceRemoved(Board theBoard, Piece p)
+		{
+			//Reset the set of possible moves.
+			DeInit();
+			Init();
 		}
 	}
 }

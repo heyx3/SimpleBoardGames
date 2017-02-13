@@ -7,25 +7,34 @@ using UnityEngine;
 
 namespace FiaCR.UnityLogic
 {
-	//TODO: Indicate when friendly pieces have already been moved this turn.
-
 	public class FCR_Piece : BoardGames.UnityLogic.PieceRenderer<Vector2i>
 	{
 		public GameObject Child_Friendly, Child_Cursed;
+
+		public Stat<bool, FCR_Piece> MovedAlready;
 
 
 		protected override void Awake()
 		{
 			base.Awake();
 
+			MovedAlready = new Stat<bool, FCR_Piece>(this, false);
+			MovedAlready.OnChanged += (_this, oldVal, newVal) =>
+			{
+				if (newVal)
+					Spr.color = Color.grey;
+				else
+					Spr.color = Color.white;
+			};
+
 			//When this piece is clicked, show the available moves.
 			OnStopClick += (me, endPos) =>
 			{
-				//Only do this if it's a friendy piece and it's Billy's turn.
+				//Only do this if it's a friendy, unmoved piece and it's Billy's turn.
 				var gameMode = (GameMode.FCR_Game_Offline)GameMode.FCR_Game_Offline.Instance;
 				if (ToTrack.Owner.Value == Board.Player_Humans &&
 					gameMode.CurrentTurn.Value == Board.Player_Humans &&
-					!gameMode.IsJuliaTurn)
+					!gameMode.IsJuliaTurn && !MovedAlready.Value)
 				{
 					FCR_MovesUI_Billy.Instance.CurrentPiece = (Piece)ToTrack;
 				}
@@ -36,15 +45,7 @@ namespace FiaCR.UnityLogic
 		}
 		private void Start()
 		{
-			//When this piece changes teams, flip its sprite.
-			ToTrack.Owner.OnChanged += (piece, oldTeam, newTeam) =>
-			{
-				ResetPieceFocus(piece, piece);
-
-				//Play the "capture" effects.
-				var obj = Instantiate(FCR_PieceDispatcher.Instance.PieceCaptureEffectsPrefab);
-				obj.transform.position = MyTr.position;
-			};
+			ResetPieceFocus(null, ToTrack);
 		}
 
 		protected override void ResetPieceFocus(Piece<Vector2i> oldPiece,
@@ -52,12 +53,55 @@ namespace FiaCR.UnityLogic
 		{
 			base.ResetPieceFocus(oldPiece, newPiece);
 
+			if (oldPiece != null)
+			{
+				oldPiece.Owner.OnChanged -= Callback_PieceOwnerChanged;
+			}
+
 			//Set the sprite.
 			if (newPiece != null)
 			{
-				Child_Friendly.SetActive(newPiece.Owner.Value == Board.Player_Humans);
-				Child_Cursed.SetActive(newPiece.Owner.Value == Board.Player_TC);
+				if (newPiece.Owner.Value == Board.Player_Humans)
+				{
+					Child_Friendly.SetActive(true);
+					Child_Cursed.SetActive(false);
+					Spr = Child_Friendly.GetComponent<SpriteRenderer>();
+				}
+				else
+				{
+					Child_Friendly.SetActive(false);
+					Child_Cursed.SetActive(true);
+					Spr = Child_Cursed.GetComponent<SpriteRenderer>();
+				}
+
+				newPiece.Owner.OnChanged += Callback_PieceOwnerChanged;
 			}
+		}
+
+		private void Callback_PieceOwnerChanged(BoardGames.Piece<Vector2i> piece,
+												BoardGames.Players oldTeam,
+												BoardGames.Players newTeam)
+		{
+			if (piece.Owner.Value == Board.Player_Humans)
+			{
+				Child_Friendly.SetActive(true);
+				Child_Cursed.SetActive(false);
+				Spr = Child_Friendly.GetComponent<SpriteRenderer>();
+			}
+			else
+			{
+				Child_Friendly.SetActive(false);
+				Child_Cursed.SetActive(true);
+				Spr = Child_Friendly.GetComponent<SpriteRenderer>();
+			}
+			if (MovedAlready)
+				Spr.color = Color.grey;
+			else
+				Spr.color = Color.white;
+
+			//Play the "Capture" effects.
+			var obj = Instantiate(FCR_PieceDispatcher.Instance.PieceCaptureEffectsPrefab);
+			obj.transform.position = MyTr.position;
 		}
 
 		protected override IEnumerator MovePieceCoroutine(Vector2i startPos, Vector2i endPos)

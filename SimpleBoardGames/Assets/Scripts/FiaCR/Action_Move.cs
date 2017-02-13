@@ -11,7 +11,7 @@ namespace FiaCR
 		public Vector2i NewPos { get; private set; }
 
 		private Vector2i oldPos;
-		private bool movedOffHost;
+		private bool movedOffHost, removedPiece;
 
 
 		protected override Players Team {  get { return ToMove.Owner; } }
@@ -33,16 +33,33 @@ namespace FiaCR
 			oldPos = ToMove.CurrentPos;
 			movedOffHost = ((Board)TheBoard).GetHost(oldPos).HasValue;
 
-			ToMove.CurrentPos.Value = NewPos;
+			//If this piece completes a block of 3x3 to make a host, remove it.
+			if (HostBlockMinCorner.HasValue)
+			{
+				removedPiece = true;
+				Board theBoard = (Board)TheBoard;
+				theBoard.RemovePiece(ToMove);
+			}
+			//Otherwise, just move it like normal.
+			else
+			{
+				removedPiece = false;
+				ToMove.CurrentPos.Value = NewPos;
+			}
 		}
 		protected override void Action_Undo()
 		{
 			base.Action_Undo();
 
-			if (movedOffHost)
-				((Board)TheBoard).RemovePiece(oldPos);
+			var board = (Board)TheBoard;
 
-			ToMove.CurrentPos.Value = oldPos;
+			if (movedOffHost)
+				board.RemovePiece(oldPos);
+
+			if (removedPiece)
+				board.AddPiece(new Piece(oldPos, ToMove.Owner, board));
+			else
+				ToMove.CurrentPos.Value = oldPos;
 		}
 
 		public override void Serialize(BinaryWriter stream)

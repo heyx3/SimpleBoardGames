@@ -55,9 +55,15 @@ namespace FiaCR
 
 				for (int y = min.y; y < min.y + 3; ++y)
 					for (int x = min.x; x < min.x + 3; ++x)
-						board.RemovePiece(new Vector2i(x, y));
+					{
+						Vector2i pos = new Vector2i(x, y);
+						if (board.GetPiece(pos) != null)
+							board.RemovePiece(new Vector2i(x, y));
+					}
 
-				board.AddHost(new Vector2i(min.x + 1, min.y + 1), newTeam);
+				Vector2i hostPos = min + new Vector2i(1, 1);
+				board.AddHost(hostPos, newTeam);
+				board.AddPiece(new Piece(hostPos, Team, board));
 			}
 		}
 		protected override void Action_Undo()

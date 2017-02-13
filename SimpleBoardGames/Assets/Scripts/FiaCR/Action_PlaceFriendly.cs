@@ -25,13 +25,20 @@ namespace FiaCR
 		{
 			base.Action_Do();
 
-			Board theBoard = (Board)TheBoard;
-			theBoard.AddPiece(new Piece(Pos, Board.Player_Humans, theBoard));
+			//If this piece completes a block of 3x3 to make a host, don't actually place it.
+			if (!HostBlockMinCorner.HasValue)
+			{
+				Board theBoard = (Board)TheBoard;
+				theBoard.AddPiece(new Piece(Pos, Board.Player_Humans, theBoard));
+			}
 		}
 		protected override void Action_Undo()
 		{
 			base.Action_Undo();
-			((Board)TheBoard).RemovePiece(Pos);
+
+			var board = (Board)TheBoard;
+			if (board.GetPiece(Pos) != null)
+				board.RemovePiece(Pos);
 		}
 
 		public override void Serialize(BinaryWriter stream)
