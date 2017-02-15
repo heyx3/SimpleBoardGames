@@ -34,18 +34,18 @@ namespace FiaCR
 		public static readonly Dictionary<Sizes, uint> NJuliaMovesByBoardSize =
 			new Dictionary<Sizes, uint>()
 			{
-				{ Sizes.SixBySix, 4 },
-				{ Sizes.SevenBySeven, 6 },
-				{ Sizes.EightByEight, 8 },
-				{ Sizes.NineByNine, 10 },
+				{ Sizes.SixBySix, 3 },
+				{ Sizes.SevenBySeven, 4 },
+				{ Sizes.EightByEight, 6 },
+				{ Sizes.NineByNine, 9 },
 			};
 		public static readonly Dictionary<Sizes, uint> NBillyMovesByBoardSize =
 			new Dictionary<Sizes, uint>()
 			{
-				{ Sizes.SixBySix, 4 },
-				{ Sizes.SevenBySeven, 6 },
-				{ Sizes.EightByEight, 8 },
-				{ Sizes.NineByNine, 10 },
+				{ Sizes.SixBySix, 3 },
+				{ Sizes.SevenBySeven, 4 },
+				{ Sizes.EightByEight, 6 },
+				{ Sizes.NineByNine, 9 },
 			};
 		public static readonly Dictionary<Sizes, float> ChanceCurseMoveByBoardSize =
 			new Dictionary<Sizes, float>()

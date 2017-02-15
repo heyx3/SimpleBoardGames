@@ -19,6 +19,11 @@ public class InputResponder : MonoBehaviour
 	public float MinDragDistance = 0.5f;
 
 
+	public UnityEngine.Events.UnityEvent Unity_OnStartClick =
+				new UnityEngine.Events.UnityEvent();
+	public UnityEngine.Events.UnityEvent Unity_OnStopClick =
+				new UnityEngine.Events.UnityEvent();
+
 	/// <summary>
 	/// Called when this item is first clicked on.
 	/// </summary>
@@ -48,6 +53,7 @@ public class InputResponder : MonoBehaviour
 	{
 		if (OnStartClick != null)
 			OnStartClick(this, mPos);
+		Unity_OnStartClick.Invoke();
 	}
 	public void RaiseEvent_Drag(Vector2 lastMPos, Vector2 currentMPos)
 	{
@@ -58,6 +64,7 @@ public class InputResponder : MonoBehaviour
 	{
 		if (OnStopClick != null)
 			OnStopClick(this, mPos);
+		Unity_OnStopClick.Invoke();
 	}
 	public void RaiseEvent_StopDrag(Vector2 originalMPos, Vector2 finalMPos)
 	{

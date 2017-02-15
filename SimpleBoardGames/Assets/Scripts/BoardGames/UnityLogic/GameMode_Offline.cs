@@ -84,5 +84,16 @@ namespace BoardGames.UnityLogic.GameMode
 			yield return new WaitForSeconds(WinWaitTime);
 			UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
 		}
+
+		/// <summary>
+		/// Removes the save file and restarts this game mode.
+		/// </summary>
+		public void ClearGame()
+		{
+			if (File.Exists(filePath))
+				File.Delete(filePath);
+
+			UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+		}
 	}
 }
