@@ -10,7 +10,7 @@ namespace BoardGames
 	/// <typeparam name="LocationType">
 	/// The data structure used to represent a location on the game board.
 	/// </typeparam>
-	public class Action<LocationType>
+	public abstract class Action<LocationType>
 		where LocationType : IEquatable<LocationType>
 	{
 		public Board<LocationType> TheBoard { get; private set; }
@@ -21,23 +21,20 @@ namespace BoardGames
 		}
 
 
-		/// <summary>
-		/// Default behavior: Raises the board's "OnAction" event.
-		/// Note that child classes probably want to call this base implementation
-		///     at the END of their implementation.
-		/// </summary>
-		public virtual void DoAction()
+		public void DoAction()
 		{
+			Action_Do();
 			TheBoard.DidAction(this);
 		}
-		/// <summary>
-		/// Default behavior: Raises the board's "OnUndoAction" event.
-		/// Note that child classes probably want to call this base implementation
-		///     at the END of their implementation.
-		/// </summary>
-		public virtual void UndoAction()
+		public void UndoAction()
 		{
+			Action_Undo();
 			TheBoard.UndidAction(this);
 		}
+		protected virtual void Action_Do() { }
+		protected virtual void Action_Undo() { }
+
+		public abstract void Serialize(System.IO.BinaryWriter stream);
+		public abstract void Deserialize(System.IO.BinaryReader stream);
 	}
 }

@@ -27,7 +27,7 @@ namespace BoardGames.UnityLogic
 		}
 		private Piece<LocationType> toTrack = null;
 		
-		public SpriteRenderer Spr { get; private set; }
+		public SpriteRenderer Spr { get; protected set; }
 
 		private Coroutine movePieceCoroutine = null;
 
@@ -35,7 +35,7 @@ namespace BoardGames.UnityLogic
 		protected override void Awake()
 		{
 			base.Awake();
-			Spr = GetComponent<SpriteRenderer>();
+			Spr = GetComponentInChildren<SpriteRenderer>();
 		}
 		protected virtual void OnDestroy()
 		{

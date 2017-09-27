@@ -119,6 +119,7 @@ public class InputManager : Singleton<InputManager>
 				{
 					if (IsDragging)
 					{
+						IsDragging = false;
 						CurrentlyClicked.RaiseEvent_StopDrag(StartClickWorldPos, CurrentClickWorldPos);
 					}
 					else

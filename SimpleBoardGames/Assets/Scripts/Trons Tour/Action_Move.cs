@@ -1,4 +1,7 @@
-﻿namespace TronsTour
+﻿using System;
+using System.IO;
+
+namespace TronsTour
 {
 	public class Action_Move : BoardGames.Action<Vector2i>
 	{
@@ -17,15 +20,30 @@
 		}
 
 
-		public override void DoAction()
+		protected override void Action_Do()
 		{
+			base.Action_Do();
 			ThePiece.CurrentPos.Value = EndPos;
-			base.DoAction();
 		}
-		public override void UndoAction()
+		protected override void Action_Undo()
 		{
+			base.Action_Undo();
 			ThePiece.CurrentPos.Value = StartPos;
-			base.UndoAction();
+		}
+
+		public override void Serialize(BinaryWriter stream)
+		{
+			stream.Write((byte)ThePiece.Owner.Value);
+			stream.Write((Int32)StartPos.x);
+			stream.Write((Int32)StartPos.y);
+			stream.Write((Int32)EndPos.x);
+			stream.Write((Int32)EndPos.y);
+		}
+		public override void Deserialize(BinaryReader stream)
+		{
+			ThePiece = ((Board)TheBoard).GetPiece((BoardGames.Players)stream.ReadByte());
+			StartPos = new Vector2i(stream.ReadInt32(), stream.ReadInt32());
+			EndPos = new Vector2i(stream.ReadInt32(), stream.ReadInt32());
 		}
 	}
 }

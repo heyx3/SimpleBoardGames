@@ -137,6 +137,8 @@ namespace Fitchneil
 		}
 
 
+		public Piece GetPiece(Vector2i pos) { return theBoard[pos.x, pos.y]; }
+
 		public override IEnumerable<BoardGames.Piece<Vector2i>> GetPieces()
 		{
 			for (int y = 0; y < theBoard.GetLength(1); ++y)

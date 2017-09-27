@@ -12,7 +12,8 @@ public abstract class Singleton<T> : MonoBehaviour where T : Singleton<T>
 
 	protected virtual void Awake()
 	{
-		UnityEngine.Assertions.Assert.IsNull(Instance, "There are two instances of " + this.GetType());
+		if (Instance != null && Instance != this)
+			UnityEngine.Assertions.Assert.IsTrue(false, "There are two instances of " + typeof(T).Name);
 		Instance = (T)this;
 	}
 	protected virtual void OnDestroy()

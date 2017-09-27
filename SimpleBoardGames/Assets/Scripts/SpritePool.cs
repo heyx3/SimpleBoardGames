@@ -12,13 +12,12 @@ public class SpritePool : Singleton<SpritePool>
 	private List<SpriteRenderer> unusedSprites = new List<SpriteRenderer>();
 
 
-	public List<SpriteRenderer> AllocateSprites(int nSprites, Sprite spr,
-												int sortingLayer = 1,
-												Transform parentContainer = null,
-												string names = "Pooled Sprite")
+	public SpriteRenderer AllocateSprite(Sprite spr, int sortingLayer = 1,
+										 Transform parentContainer = null,
+										 string names = "Pooled Sprite")
 	{
 		//Make sure there are enough unused sprites to allocate.
-		while (unusedSprites.Count < nSprites)
+		if (unusedSprites.Count == 0)
 		{
 			GameObject go = new GameObject();
 			SpriteRenderer sprR = go.AddComponent<SpriteRenderer>();
@@ -27,39 +26,48 @@ public class SpritePool : Singleton<SpritePool>
 		}
 
 		//Allocate the unused sprites.
+
+		var sprRnd = unusedSprites[0];
+		unusedSprites.RemoveAt(0);
+
+		sprRnd.gameObject.SetActive(true);
+		sprRnd.gameObject.name = names;
+		sprRnd.transform.parent = parentContainer;
+		sprRnd.sprite = spr;
+		sprRnd.sortingOrder = sortingLayer;
+
+		return sprRnd;
+	}
+	public List<SpriteRenderer> AllocateSprites(int nSprites, Sprite spr,
+												int sortingLayer = 1,
+												Transform parentContainer = null,
+												string names = "Pooled Sprite")
+	{
 		List<SpriteRenderer> used = new List<SpriteRenderer>();
 		for (int i = 0; i < nSprites; ++i)
-		{
-			//Set up the GameObject for this move.
-			unusedSprites[0].gameObject.SetActive(true);
-			unusedSprites[0].gameObject.name = names;
-			unusedSprites[0].transform.parent = parentContainer;
-			unusedSprites[0].sprite = spr;
-			unusedSprites[0].sortingOrder = sortingLayer;
-
-			//Set up the various lists storing used/unused sprites.
-			used.Add(unusedSprites[0]);
-			unusedSprites.RemoveAt(0);
-		}
+			used.Add(AllocateSprite(spr, sortingLayer, parentContainer, names));
 		return used;
+	}
+
+	public void DeallocateSprite(SpriteRenderer spr)
+	{
+		//Remove all components other than the SpriteRenderer and Transform.
+		foreach (Component c in spr.gameObject.GetComponents<Component>())
+			if (!(c is SpriteRenderer) && !(c is Transform))
+				Destroy(c);
+
+		//Remove all child objects.
+		Transform tr = spr.transform;
+		while (tr.childCount > 0)
+			Destroy(tr.GetChild(0).gameObject);
+
+		spr.gameObject.SetActive(false);
+
+		unusedSprites.Add(spr);
 	}
 	public void DeallocateSprites(List<SpriteRenderer> sprites)
 	{
 		foreach (SpriteRenderer spr in sprites)
-		{
-			//Remove all components other than the SpriteRenderer and Transform.
-			foreach (Component c in spr.gameObject.GetComponents<Component>())
-				if (!(c is SpriteRenderer) && !(c is Transform))
-					Destroy(c);
-
-			//Remove all child objects.
-			Transform tr = spr.transform;
-			while (tr.childCount > 0)
-				Destroy(tr.GetChild(0).gameObject);
-						
-			spr.gameObject.SetActive(false);
-
-			unusedSprites.Add(spr);
-		}
+			DeallocateSprite(spr);
 	}
 }

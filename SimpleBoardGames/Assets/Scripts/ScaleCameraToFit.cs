@@ -10,6 +10,7 @@ public class ScaleCameraToFit : MonoBehaviour
 	public Camera Cam { get; private set; }
 	public Transform Tr { get; private set; }
 
+
 	private void Awake()
 	{
 		Cam = GetComponent<Camera>();
