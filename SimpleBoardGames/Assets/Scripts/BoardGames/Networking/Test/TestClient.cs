@@ -51,10 +51,9 @@ public class TestClient : MonoBehaviour
 				string received = null;
 
 				//Do this on another thread so it doesn't block.
-				bool succeeded = false;
 				Thread thread = new Thread(() =>
 				{
-					succeeded = Try(() => received = serverStreamReader.ReadString());
+					Try(() => received = serverStreamReader.ReadString());
 				});
 				thread.Start();
 				while (thread.IsAlive)

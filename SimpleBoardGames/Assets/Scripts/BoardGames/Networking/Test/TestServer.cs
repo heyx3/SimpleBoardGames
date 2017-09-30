@@ -97,9 +97,6 @@ public class TestServer : MonoBehaviour
 
 	public void OnGUI()
 	{
-		GUILayout.BeginArea(new Rect(0.0f, 0.0f,
-									 (Screen.width * 0.5f) - 25.0f, Screen.height));
-
 		GUILayout.Label("Server");
 		GUILayout.Space(15.0f);
 		if (GUILayout.Button("Find connection", GUILayout.MaxWidth(200.0f)))
@@ -139,7 +136,5 @@ public class TestServer : MonoBehaviour
 		for (int i = 0; i < msgs.Count; ++i)
 			GUILayout.Label(msgs[i]);
 		GUILayout.EndScrollView();
-
-		GUILayout.EndArea();
 	}
 }

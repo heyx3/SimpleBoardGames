@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using System.Net;
 using UnityEngine;
 
@@ -45,5 +46,21 @@ namespace BoardGames
 								         .Matches(externalIP)[0].ToString());
 		}
 		private static WebClient webClient = new WebClient();
+
+		public static void Write(this BinaryWriter writer, IPEndPoint endPoint)
+		{
+			byte[] bytes = endPoint.Address.GetAddressBytes();
+			writer.Write((Int32)bytes.Length);
+			writer.Write(bytes);
+
+			writer.Write((Int32)endPoint.Port);
+		}
+		public static IPEndPoint ReadIP(this BinaryReader reader)
+		{
+			int nBytes = reader.ReadInt32();
+			byte[] ipBytes = reader.ReadBytes(nBytes);
+			int port = reader.ReadInt32();
+			return new IPEndPoint(new IPAddress(ipBytes), port);
+		}
 	}
 }

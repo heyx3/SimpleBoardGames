@@ -20,30 +20,11 @@ namespace BoardGames.Networking.Messages
 
 		GetGameState,
 		GameState,
+		AcknowledgeGameEnd,
 
 		MakeMove,
 		MoveSuccessful,
 	}
-
-	public static class Extensions
-	{
-		public static void Write(this BinaryWriter writer, IPEndPoint endPoint)
-		{
-			byte[] bytes = endPoint.Address.GetAddressBytes();
-			writer.Write((Int32)bytes.Length);
-			writer.Write(bytes);
-
-			writer.Write((Int32)endPoint.Port);
-		}
-		public static IPEndPoint ReadIP(this BinaryReader reader)
-		{
-			int nBytes = reader.ReadInt32();
-			byte[] ipBytes = reader.ReadBytes(nBytes);
-			int port = reader.ReadInt32();
-			return new IPEndPoint(new IPAddress(ipBytes), port);
-		}
-	}
-
 
 	public abstract class Base
 	{
@@ -75,9 +56,10 @@ namespace BoardGames.Networking.Messages
 				case Types.NewBoard: b = new NewBoard(0, null); break;
 
 				case Types.GetGameState: b = new GetGameState(0, 0); break;
-				case Types.GameState: b = new GameState(null, null, TurnStates.YourTurn); break;
+				case Types.GameState: b = new GameState(0, null, null, MatchStates.Turn1); break;
+				case Types.AcknowledgeGameEnd: b = new AcknowledgeGameEnd(0); break;
 
-				case Types.MakeMove: b = new MakeMove(0, 0, null, null, TurnStates.OtherTurn); break;
+				case Types.MakeMove: b = new MakeMove(0, 0, null, null, MatchStates.Turn1); break;
 				case Types.MoveSuccessful: b = new MoveSuccessful(); break;
 
 				default: throw new NotImplementedException(type.ToString());
@@ -258,37 +240,77 @@ namespace BoardGames.Networking.Messages
 		}
 	}
 
+
+	/// <summary>
+	/// The different states of the match.
+	/// Either it's somebody's turn, or the game is over.
+	/// </summary>
+	public enum MatchStates : byte
+	{
+		Turn1, Turn2,
+		Winner1, Winner2, Tie,
+	}
+
+	[Serializable]
 	public class GameState : Base
 	{
-		public byte[] BoardState, LastAction;
-		public TurnStates TurnState;
+		public ulong SessionID { get; private set; }
+		public byte[] BoardState { get; private set; }
+		public byte[] LastAction { get; private set; }
+		public MatchStates MatchState { get; private set; }
 
-		public GameState(byte[] boardState, byte[] lastAction, TurnStates turnState)
+		public GameState(ulong sessionID, byte[] boardState, byte[] lastAction, MatchStates matchState)
 			: base(Types.GameState)
 		{
+			SessionID = sessionID;
+
 			BoardState = boardState;
 			LastAction = lastAction;
-			TurnState = turnState;
+
+			MatchState = matchState;
 		}
 
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
 
-			writer.Write((Int32)BoardState.Length);
-			writer.Write(BoardState);
+			writer.Write(SessionID);
 
-			writer.Write((Int32)LastAction.Length);
+			writer.Write(BoardState.Length);
+			writer.Write(BoardState);
+			writer.Write(LastAction.Length);
 			writer.Write(LastAction);
 
-			writer.Write((byte)TurnState);
+			writer.Write((byte)MatchState);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
+
+			SessionID = reader.ReadUInt64();
+
 			BoardState = reader.ReadBytes(reader.ReadInt32());
 			LastAction = reader.ReadBytes(reader.ReadInt32());
-			TurnState = (TurnStates)reader.ReadByte();
+
+			MatchState = (MatchStates)reader.ReadByte();
+		}
+	}
+
+	public class AcknowledgeGameEnd : Base
+	{
+		public ulong SessionID { get; private set; }
+
+		public AcknowledgeGameEnd(ulong sessionID) : base(Types.AcknowledgeGameEnd) { SessionID = sessionID; }
+
+		public override void Serialize(BinaryWriter writer)
+		{
+			base.Serialize(writer);
+			writer.Write(SessionID);
+		}
+		public override void Deserialize(BinaryReader reader)
+		{
+			base.Deserialize(reader);
+			SessionID = reader.ReadUInt64();
 		}
 	}
 
@@ -301,10 +323,10 @@ namespace BoardGames.Networking.Messages
 		public ulong SessionID;
 		public byte PlayerID;
 		public byte[] TheMove, TheBoardAfterMove;
-		public TurnStates NewState;
+		public MatchStates NewState;
 
 		public MakeMove(ulong sessionID, byte playerID, byte[] theMove, byte[] theBoardAfterMove,
-						TurnStates newState)
+						MatchStates newState)
 			: base(Types.MakeMove)
 		{
 			SessionID = sessionID;
@@ -336,7 +358,7 @@ namespace BoardGames.Networking.Messages
 			PlayerID = reader.ReadByte();
 			TheMove = reader.ReadBytes(reader.ReadInt32());
 			TheBoardAfterMove = reader.ReadBytes(reader.ReadInt32());
-			NewState = (TurnStates)reader.ReadByte();
+			NewState = (MatchStates)reader.ReadByte();
 		}
 	}
 
