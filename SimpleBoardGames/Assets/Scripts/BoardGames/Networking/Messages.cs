@@ -27,7 +27,7 @@ namespace BoardGames.Networking.Messages
 
 	public static class Extensions
 	{
-		public static void Serialize(this IPEndPoint endPoint, BinaryWriter writer)
+		public static void Write(this BinaryWriter writer, IPEndPoint endPoint)
 		{
 			byte[] bytes = endPoint.Address.GetAddressBytes();
 			writer.Write((Int32)bytes.Length);
@@ -35,7 +35,7 @@ namespace BoardGames.Networking.Messages
 
 			writer.Write((Int32)endPoint.Port);
 		}
-		public static IPEndPoint Deserialize(BinaryReader reader)
+		public static IPEndPoint ReadIP(this BinaryReader reader)
 		{
 			int nBytes = reader.ReadInt32();
 			byte[] ipBytes = reader.ReadBytes(nBytes);
@@ -127,7 +127,7 @@ namespace BoardGames.Networking.Messages
 		{
 			base.Serialize(writer);
 
-			ClientAddr.Serialize(writer);
+			writer.Write(ClientAddr);
 			writer.Write(ClientName);
 			writer.Write((UInt64)GameID);
 		}
@@ -135,7 +135,7 @@ namespace BoardGames.Networking.Messages
 		{
 			base.Deserialize(reader);
 
-			ClientAddr = Extensions.Deserialize(reader);
+			ClientAddr = reader.ReadIP();
 			ClientName = reader.ReadString();
 			GameID = reader.ReadUInt64();
 		}
@@ -154,12 +154,12 @@ namespace BoardGames.Networking.Messages
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
-			ClientAddr.Serialize(writer);
+			writer.Write(ClientAddr);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
-			ClientAddr = Extensions.Deserialize(reader);
+			ClientAddr = reader.ReadIP();
 		}
 	}
 	public class HeartbeatFromServer : Base
