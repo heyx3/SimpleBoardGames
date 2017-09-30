@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using UnityEngine;
+
+using Regex = System.Text.RegularExpressions.Regex;
 
 
 namespace BoardGames
@@ -27,5 +31,19 @@ namespace BoardGames
 
 			return sprR;
 		}
+
+		public static IPAddress GetLocalIP()
+		{
+			var host = Dns.GetHostEntry(Dns.GetHostName());
+			return host.AddressList.FirstOrDefault(
+				ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+		}
+		public static IPAddress GetPublicIP()
+		{
+			string externalIP = webClient.DownloadString("http://checkip.dyndns.org/");
+			return IPAddress.Parse(new Regex(@"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
+								         .Matches(externalIP)[0].ToString());
+		}
+		private static WebClient webClient = new WebClient();
 	}
 }

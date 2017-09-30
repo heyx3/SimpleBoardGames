@@ -10,19 +10,21 @@ using UnityEngine;
 
 public class TestServer : MonoBehaviour
 {
-	public string IP = "127.0.0.1";
 	public int Port = 50111;
+
+	private string myPublicIP = "",
+				   myLocalIP = "";
 
 	private List<string> msgs = new List<string>();
 	private Vector2 msgsScrollPos = Vector2.zero;
 	private Coroutine connectionCoroutine = null;
-
+					private void Start() { BoardGames.Utilities.GetLocalIP(); }
 	public System.Collections.IEnumerator Coroutine_TestConnection()
 	{
 		msgs.Clear();
 		yield return null;
 
-		TcpListener listener = new TcpListener(IPAddress.Parse(IP), Port);
+		TcpListener listener = new TcpListener(IPAddress.Any, Port);
 
 		listener.Start();
 		msgs.Add("Waiting for a connection...");
@@ -107,10 +109,23 @@ public class TestServer : MonoBehaviour
 			connectionCoroutine = StartCoroutine(Coroutine_TestConnection());
 		}
 
-		//IP/Port:
+		//Public/local IP:
 		GUILayout.BeginHorizontal();
-		IP = GUILayout.TextField(IP);
-		GUILayout.Label(" : ");
+		GUILayout.Label("Public IP: " + myPublicIP);
+		GUILayout.Space(15.0f);
+		GUILayout.Label("Local IP:" + myLocalIP);
+		GUILayout.Space(15.0f);
+		if (GUILayout.Button("Refresh"))
+		{
+			myPublicIP = BoardGames.Utilities.GetPublicIP().ToString();
+			myLocalIP = BoardGames.Utilities.GetLocalIP().ToString();
+		}
+		GUILayout.FlexibleSpace();
+		GUILayout.EndHorizontal();
+
+		//Port:
+		GUILayout.BeginHorizontal();
+		GUILayout.Label("Port:");
 		int p;
 		if (int.TryParse(GUILayout.TextField(Port.ToString()), out p))
 			Port = p;

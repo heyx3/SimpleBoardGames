@@ -14,7 +14,7 @@ public class TestClient : MonoBehaviour
 	public string IP = "127.0.0.1";
 	public int Port = 50111;
 	public string ServerMsg = "Hi Server!";
-	public int Timeout = 500;
+	public int Timeout = 3000;
 
 	private List<string> msgs = new List<string>();
 	private Vector2 msgsScrollPos = Vector2.zero;
