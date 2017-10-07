@@ -8,22 +8,35 @@ using System.IO;
 
 namespace BoardGames.Networking.Messages
 {
-	public enum Types
+	public enum MatchStates : byte
+	{
+		YourTurn,
+		OpponentsTurn,
+
+		YouWon,
+		OpponentWon,
+		Tie,
+	}
+
+
+	public enum Types : byte
 	{
 		Error,
+		Acknowledge,
 
-		Handshake,
-		HeartbeatClient,
-		HeartbeatServer,
+		FindGame,
+		SuccessfullyInQueue,
+
+		CheckOpponentFound,
 		FoundOpponent,
 		NewBoard,
 
 		GetGameState,
 		GameState,
-		AcknowledgeGameEnd,
 
 		MakeMove,
-		MoveSuccessful,
+
+		ForfeitGame,
 	}
 
 	public abstract class Base
@@ -48,19 +61,21 @@ namespace BoardGames.Networking.Messages
 			switch (type)
 			{
 				case Types.Error: b = new Error(null); break;
+				case Types.Acknowledge: b = new Acknowledge(); break;
 
-				case Types.Handshake: b = new Handshake(null, null, 0); break;
-				case Types.HeartbeatClient: b = new HeartbeatFromClient(null); break;
-				case Types.HeartbeatServer: b = new HeartbeatFromServer(); break;
-				case Types.FoundOpponent: b = new FoundOpponent(null, 0, 0, false); break;
-				case Types.NewBoard: b = new NewBoard(0, null); break;
+				case Types.FindGame: b = new FindGame(null, 0); break;
+				case Types.SuccessfullyInQueue: b = new SuccessfullyInQueue(0); break;
 
-				case Types.GetGameState: b = new GetGameState(0, 0); break;
-				case Types.GameState: b = new GameState(0, null, null, MatchStates.Turn1); break;
-				case Types.AcknowledgeGameEnd: b = new AcknowledgeGameEnd(0); break;
+				case Types.CheckOpponentFound: b = new CheckOpponentFound(0); break;
+				case Types.FoundOpponent: b = new FoundOpponent(null, 0, false); break;
+				case Types.NewBoard: b = new NewBoard(null); break;
 
-				case Types.MakeMove: b = new MakeMove(0, 0, null, null, MatchStates.Turn1); break;
-				case Types.MoveSuccessful: b = new MoveSuccessful(); break;
+				case Types.GetGameState: b = new GetGameState(0); break;
+				case Types.GameState: b = new GameState(null, null, MatchStates.Tie); break;
+
+				case Types.MakeMove: b = new MakeMove(0, null, null, MatchStates.Tie); break;
+
+				case Types.ForfeitGame: b = new ForfeitGame(0); break;
 
 				default: throw new NotImplementedException(type.ToString());
 			}
@@ -69,6 +84,22 @@ namespace BoardGames.Networking.Messages
 
 			return b;
 		}
+
+		#region Helper Functions
+		protected static void WriteBytes(byte[] bytes, BinaryWriter writer)
+		{
+			writer.Write(bytes.Length);
+			foreach (byte b in bytes)
+				writer.Write(b);
+		}
+		protected static byte[] ReadBytes(BinaryReader reader)
+		{
+			byte[] bytes = new byte[reader.ReadInt32()];
+			for (int i = 0; i < bytes.Length; ++i)
+				bytes[i] = reader.ReadByte();
+			return bytes;
+		}
+		#endregion
 	}
 
 	public class Error : Base
@@ -88,19 +119,21 @@ namespace BoardGames.Networking.Messages
 			Msg = reader.ReadString();
 		}
 	}
-
-	#region New Client
-
-	public class Handshake : Base
+	public class Acknowledge : Base
 	{
-		public IPEndPoint ClientAddr;
+		public Acknowledge() : base(Types.Acknowledge) { }
+	}
+
+	#region Find Game
+
+	public class FindGame : Base
+	{
 		public string ClientName;
 		public ulong GameID;
 
-		public Handshake(IPEndPoint clientAddr, string clientName, ulong gameID)
-			: base(Types.Handshake)
+		public FindGame(string clientName, ulong gameID)
+			: base(Types.FindGame)
 		{
-			ClientAddr = clientAddr;
 			ClientName = clientName;
 			GameID = gameID;
 		}
@@ -108,105 +141,111 @@ namespace BoardGames.Networking.Messages
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
-
-			writer.Write(ClientAddr);
 			writer.Write(ClientName);
-			writer.Write((UInt64)GameID);
+			writer.Write(GameID);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
-
-			ClientAddr = reader.ReadIP();
 			ClientName = reader.ReadString();
 			GameID = reader.ReadUInt64();
 		}
 	}
-
-	public class HeartbeatFromClient : Base
+	public class SuccessfullyInQueue : Base
 	{
-		public IPEndPoint ClientAddr;
+		public ulong PlayerID;
 
-		public HeartbeatFromClient(IPEndPoint clientAddr)
-			: base(Types.HeartbeatClient)
+		public SuccessfullyInQueue(ulong playerID)
+			: base(Types.SuccessfullyInQueue)
 		{
-			ClientAddr = clientAddr;
+			PlayerID = playerID;
 		}
 
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
-			writer.Write(ClientAddr);
+			writer.Write(PlayerID);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
-			ClientAddr = reader.ReadIP();
+			PlayerID = reader.ReadUInt64();
 		}
 	}
-	public class HeartbeatFromServer : Base
-	{
-		public HeartbeatFromServer() : base(Types.HeartbeatServer) { }
-	}
 
+	#endregion
+
+	#region Check Opponent Found
+
+	public class CheckOpponentFound : Base
+	{
+		public ulong PlayerID;
+
+		public CheckOpponentFound(ulong playerID)
+			: base(Types.SuccessfullyInQueue)
+		{
+			PlayerID = playerID;
+		}
+
+		public override void Serialize(BinaryWriter writer)
+		{
+			base.Serialize(writer);
+			writer.Write(PlayerID);
+		}
+		public override void Deserialize(BinaryReader reader)
+		{
+			base.Deserialize(reader);
+			PlayerID = reader.ReadUInt64();
+		}
+	}
 	public class FoundOpponent : Base
 	{
 		public string OpponentName;
-		public ulong SessionID;
-		public byte PlayerID;
+		public ulong OpponentID;
 		public bool AmIGoingFirst;
 
-		public FoundOpponent(string opponentName, ulong sessionID, byte playerID, bool amGoingFirst)
+		public FoundOpponent(string opponentName, ulong opponentID, bool amIGoingFirst)
 			: base(Types.FoundOpponent)
 		{
 			OpponentName = opponentName;
-			SessionID = sessionID;
-			PlayerID = playerID;
-			AmIGoingFirst = amGoingFirst;
+			OpponentID = opponentID;
+			AmIGoingFirst = amIGoingFirst;
 		}
 
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
 			writer.Write(OpponentName);
-			writer.Write((UInt64)SessionID);
-			writer.Write((byte)PlayerID);
+			writer.Write(OpponentID);
 			writer.Write(AmIGoingFirst);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
 			OpponentName = reader.ReadString();
-			SessionID = reader.ReadUInt64();
-			PlayerID = reader.ReadByte();
+			OpponentID = reader.ReadUInt64();
 			AmIGoingFirst = reader.ReadBoolean();
 		}
 	}
-
 	public class NewBoard : Base
 	{
-		public ulong SessionID;
 		public byte[] BoardState;
 
-		public NewBoard(ulong sessionID, byte[] boardState)
+		public NewBoard(byte[] boardState)
 			: base(Types.NewBoard)
 		{
-			SessionID = sessionID;
 			BoardState = boardState;
 		}
 
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
-			writer.Write((UInt64)SessionID);
-			writer.Write((Int32)BoardState.Length);
-			writer.Write(BoardState);
+			WriteBytes(BoardState, writer);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
-			SessionID = reader.ReadUInt64();
-			BoardState = reader.ReadBytes(reader.ReadInt32());
+			BoardState = ReadBytes(reader);
 		}
 	}
 
@@ -216,57 +255,40 @@ namespace BoardGames.Networking.Messages
 
 	public class GetGameState : Base
 	{
-		public ulong SessionID;
-		public byte PlayerID;
+		public ulong PlayerID;
+		public int LastKnownMovement;
 
-		public GetGameState(ulong sessionID, byte playerID)
+		public GetGameState(ulong playerID, int lastKnownMovement)
 			: base(Types.GetGameState)
 		{
-			SessionID = sessionID;
 			PlayerID = playerID;
+			LastKnownMovement = lastKnownMovement;
 		}
 
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
-			writer.Write((UInt64)SessionID);
-			writer.Write((byte)PlayerID);
+			writer.Write(PlayerID);
+			writer.Write(LastKnownMovement);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
-			SessionID = reader.ReadUInt64();
-			PlayerID = reader.ReadByte();
+			PlayerID = reader.ReadUInt64();
+			LastKnownMovement = reader.ReadInt32();
 		}
 	}
-
-
-	/// <summary>
-	/// The different states of the match.
-	/// Either it's somebody's turn, or the game is over.
-	/// </summary>
-	public enum MatchStates : byte
-	{
-		Turn1, Turn2,
-		Winner1, Winner2, Tie,
-	}
-
-	[Serializable]
 	public class GameState : Base
 	{
-		public ulong SessionID { get; private set; }
-		public byte[] BoardState { get; private set; }
-		public byte[] LastAction { get; private set; }
-		public MatchStates MatchState { get; private set; }
+		public byte[] BoardState;
+		public byte[][] RecentMoves;
+		public MatchStates MatchState;
 
-		public GameState(ulong sessionID, byte[] boardState, byte[] lastAction, MatchStates matchState)
+		public GameState(byte[] boardState, byte[][] recentMoves, MatchStates matchState)
 			: base(Types.GameState)
 		{
-			SessionID = sessionID;
-
 			BoardState = boardState;
-			LastAction = lastAction;
-
+			RecentMoves = recentMoves;
 			MatchState = matchState;
 		}
 
@@ -274,12 +296,11 @@ namespace BoardGames.Networking.Messages
 		{
 			base.Serialize(writer);
 
-			writer.Write(SessionID);
+			WriteBytes(BoardState, writer);
 
-			writer.Write(BoardState.Length);
-			writer.Write(BoardState);
-			writer.Write(LastAction.Length);
-			writer.Write(LastAction);
+			writer.Write(RecentMoves.Length);
+			foreach (byte[] move in RecentMoves)
+				WriteBytes(move, writer);
 
 			writer.Write((byte)MatchState);
 		}
@@ -287,30 +308,13 @@ namespace BoardGames.Networking.Messages
 		{
 			base.Deserialize(reader);
 
-			SessionID = reader.ReadUInt64();
+			BoardState = ReadBytes(reader);
 
-			BoardState = reader.ReadBytes(reader.ReadInt32());
-			LastAction = reader.ReadBytes(reader.ReadInt32());
+			RecentMoves = new byte[reader.ReadInt32()][];
+			for (int i = 0; i < RecentMoves.Length; ++i)
+				RecentMoves[i] = ReadBytes(reader);
 
 			MatchState = (MatchStates)reader.ReadByte();
-		}
-	}
-
-	public class AcknowledgeGameEnd : Base
-	{
-		public ulong SessionID { get; private set; }
-
-		public AcknowledgeGameEnd(ulong sessionID) : base(Types.AcknowledgeGameEnd) { SessionID = sessionID; }
-
-		public override void Serialize(BinaryWriter writer)
-		{
-			base.Serialize(writer);
-			writer.Write(SessionID);
-		}
-		public override void Deserialize(BinaryReader reader)
-		{
-			base.Deserialize(reader);
-			SessionID = reader.ReadUInt64();
 		}
 	}
 
@@ -320,51 +324,58 @@ namespace BoardGames.Networking.Messages
 
 	public class MakeMove : Base
 	{
-		public ulong SessionID;
-		public byte PlayerID;
-		public byte[] TheMove, TheBoardAfterMove;
-		public MatchStates NewState;
+		public ulong PlayerID;
+		public byte[] Move;
+		public byte[] NewBoardState;
+		public MatchStates NewMatchState;
 
-		public MakeMove(ulong sessionID, byte playerID, byte[] theMove, byte[] theBoardAfterMove,
-						MatchStates newState)
+		public MakeMove(ulong playerID, byte[] move, byte[] newBoardState, MatchStates newMatchState)
 			: base(Types.MakeMove)
 		{
-			SessionID = sessionID;
 			PlayerID = playerID;
-			TheMove = theMove;
-			TheBoardAfterMove = theBoardAfterMove;
-			NewState = newState;
+			Move = move;
+			NewBoardState = newBoardState;
+			NewMatchState = newMatchState;
 		}
 
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
-
-			writer.Write((UInt64)SessionID);
-			writer.Write((byte)PlayerID);
-
-			writer.Write((Int32)TheMove.Length);
-			writer.Write(TheMove);
-
-			writer.Write((Int32)TheBoardAfterMove.Length);
-			writer.Write(TheBoardAfterMove);
-
-			writer.Write((byte)NewState);
+			writer.Write(PlayerID);
+			WriteBytes(Move, writer);
+			WriteBytes(NewBoardState, writer);
+			writer.Write((byte)NewMatchState);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
-			SessionID = reader.ReadUInt64();
-			PlayerID = reader.ReadByte();
-			TheMove = reader.ReadBytes(reader.ReadInt32());
-			TheBoardAfterMove = reader.ReadBytes(reader.ReadInt32());
-			NewState = (MatchStates)reader.ReadByte();
+			PlayerID = reader.ReadUInt64();
+			Move = ReadBytes(reader);
+			NewBoardState = ReadBytes(reader);
+			NewMatchState = (MatchStates)reader.ReadByte();
 		}
 	}
 
-	public class MoveSuccessful : Base
+	#endregion
+
+	#region Forfeit Game
+
+	public class ForfeitGame : Base
 	{
-		public MoveSuccessful() : base(Types.MoveSuccessful) { }
+		public ulong PlayerID;
+
+		public ForfeitGame(ulong playerID) : base(Types.ForfeitGame) { PlayerID = playerID; }
+
+		public override void Serialize(BinaryWriter writer)
+		{
+			base.Serialize(writer);
+			writer.Write(PlayerID);
+		}
+		public override void Deserialize(BinaryReader reader)
+		{
+			base.Deserialize(reader);
+			PlayerID = reader.ReadUInt64();
+		}
 	}
 
 	#endregion

@@ -61,7 +61,7 @@ namespace BoardGames
 		/// </summary>
 		public virtual IEnumerable<Action<LocationType>> GetActions(Players player) { yield break; }
 
-		
+
 		//The board must be serializable to and from a byte stream.
 		public abstract void Serialize(System.IO.BinaryWriter stream);
 		public abstract void Deserialize(System.IO.BinaryReader stream);

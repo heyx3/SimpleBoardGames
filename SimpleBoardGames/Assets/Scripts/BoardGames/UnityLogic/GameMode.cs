@@ -22,7 +22,7 @@ namespace BoardGames.UnityLogic.GameMode
 
 		protected abstract Board<LocationType> CreateNewBoard();
 		protected abstract void OnAction(BoardGames.Action<LocationType> move);
-		
+
 		/// <summary>
 		/// Returns whether it was successful.
 		/// </summary>

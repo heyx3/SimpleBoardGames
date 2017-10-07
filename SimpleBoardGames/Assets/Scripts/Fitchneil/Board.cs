@@ -146,7 +146,7 @@ namespace Fitchneil
 					if (theBoard[x, y] != null)
 						yield return theBoard[x, y];
 		}
-		
+
 		public override IEnumerable<BoardGames.Action<Vector2i>> GetActions(BoardGames.Piece<Vector2i> piece)
 		{
 			//See how far to the left and right the piece can move.
