@@ -556,7 +556,9 @@ namespace BoardGames.Networking
 				int nGames = reader.ReadInt32();
 				for (int i = 0; i < nGames; ++i)
 				{
-					new Networking.GameState();
+					ulong id = reader.ReadUInt64();
+					finishedGamesByUnacknowledgedPlayer.Add(id, new Networking.GameState());
+					finishedGamesByUnacknowledgedPlayer[id].Deserialize(reader);
 				}
 			}
 
