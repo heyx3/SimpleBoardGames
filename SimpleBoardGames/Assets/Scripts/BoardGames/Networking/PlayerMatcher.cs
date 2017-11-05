@@ -90,22 +90,39 @@ namespace BoardGames.Networking
 		}
 
 		/// <summary>
+		/// Tries to find the Player with the given ID.
+		/// </summary>
+		public Player? TryGetKey(ulong playerID)
+		{
+			lock (locker)
+			{
+				return opponents.Keys.FirstOrDefault(p => p.PlayerID == playerID);
+			}
+		}
+		/// <summary>
 		/// If the given player finally has a match,
 		///     removes him from this queue and returns his opponent.
 		/// Otherwise, returns null.
 		/// </summary>
-		public Player? TryPop(Player playerData)
+		/// <param name="wasFirst">
+		/// If an opponent exists, this variable represents
+		///     whether the given player is player 1 or player 2.
+		/// </param>
+		public Player? TryPop(Player playerData, out bool wasFirst)
 		{
 			lock (locker)
 			{
-				if (opponents[playerData] != null)
+				if (opponents[playerData].HasValue)
 				{
 					var opponent = opponents[playerData];
 					opponents.Remove(playerData);
+
+					wasFirst = opponents.ContainsKey(opponent.Value);
 					return opponent;
 				}
 			}
 
+			wasFirst = false;
 			return null;
 		}
 

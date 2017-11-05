@@ -10,12 +10,31 @@ namespace BoardGames.Networking.Messages
 {
 	public enum MatchStates : byte
 	{
-		YourTurn,
-		OpponentsTurn,
+		Player1Turn,
+		Player2Turn,
 
-		YouWon,
-		OpponentWon,
+		Player1Won,
+		Player2Won,
 		Tie,
+	}
+	public static class Extensions
+	{
+		public static bool IsGameOver(this MatchStates state)
+		{
+			switch (state)
+			{
+				case MatchStates.Player1Turn:
+				case MatchStates.Player2Turn:
+					return false;
+
+				case MatchStates.Player1Won:
+				case MatchStates.Player2Won:
+				case MatchStates.Tie:
+					return true;
+
+				default: throw new NotImplementedException(state.ToString());
+			}
+		}
 	}
 
 
@@ -68,10 +87,10 @@ namespace BoardGames.Networking.Messages
 
 				case Types.CheckOpponentFound: b = new CheckOpponentFound(0); break;
 				case Types.FoundOpponent: b = new FoundOpponent(null, 0, false); break;
-				case Types.NewBoard: b = new NewBoard(null); break;
+				case Types.NewBoard: b = new NewBoard(null, MatchStates.Tie); break;
 
-				case Types.GetGameState: b = new GetGameState(0); break;
-				case Types.GameState: b = new GameState(null, null, MatchStates.Tie); break;
+				case Types.GetGameState: b = new GetGameState(0, 0); break;
+				case Types.GameState: b = new GameState(null, null, MatchStates.Tie, 0, 0); break;
 
 				case Types.MakeMove: b = new MakeMove(0, null, null, MatchStates.Tie); break;
 
@@ -230,22 +249,26 @@ namespace BoardGames.Networking.Messages
 	public class NewBoard : Base
 	{
 		public byte[] BoardState;
+		public MatchStates MatchState;
 
-		public NewBoard(byte[] boardState)
+		public NewBoard(byte[] boardState, MatchStates matchState)
 			: base(Types.NewBoard)
 		{
 			BoardState = boardState;
+			MatchState = matchState;
 		}
 
 		public override void Serialize(BinaryWriter writer)
 		{
 			base.Serialize(writer);
 			WriteBytes(BoardState, writer);
+			writer.Write((byte)MatchState);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
 			base.Deserialize(reader);
 			BoardState = ReadBytes(reader);
+			MatchState = (MatchStates)reader.ReadByte();
 		}
 	}
 
@@ -255,7 +278,13 @@ namespace BoardGames.Networking.Messages
 
 	public class GetGameState : Base
 	{
+		/// <summary>
+		/// The ID of the player making the request.
+		/// </summary>
 		public ulong PlayerID;
+		/// <summary>
+		/// // A 0 represents "no moves have been processed yet".
+		/// </summary>
 		public int LastKnownMovement;
 
 		public GetGameState(ulong playerID, int lastKnownMovement)
@@ -283,13 +312,17 @@ namespace BoardGames.Networking.Messages
 		public byte[] BoardState;
 		public byte[][] RecentMoves;
 		public MatchStates MatchState;
+		public ulong Player1ID, Player2ID;
 
-		public GameState(byte[] boardState, byte[][] recentMoves, MatchStates matchState)
+		public GameState(byte[] boardState, byte[][] recentMoves, MatchStates matchState,
+						 ulong player1ID, ulong player2ID)
 			: base(Types.GameState)
 		{
 			BoardState = boardState;
 			RecentMoves = recentMoves;
 			MatchState = matchState;
+			Player1ID = player1ID;
+			Player2ID = player2ID;
 		}
 
 		public override void Serialize(BinaryWriter writer)
@@ -303,6 +336,9 @@ namespace BoardGames.Networking.Messages
 				WriteBytes(move, writer);
 
 			writer.Write((byte)MatchState);
+
+			writer.Write(Player1ID);
+			writer.Write(Player2ID);
 		}
 		public override void Deserialize(BinaryReader reader)
 		{
@@ -315,6 +351,9 @@ namespace BoardGames.Networking.Messages
 				RecentMoves[i] = ReadBytes(reader);
 
 			MatchState = (MatchStates)reader.ReadByte();
+
+			Player1ID = reader.ReadUInt64();
+			Player2ID = reader.ReadUInt64();
 		}
 	}
 

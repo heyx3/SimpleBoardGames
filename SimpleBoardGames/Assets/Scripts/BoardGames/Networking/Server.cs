@@ -18,14 +18,34 @@ namespace BoardGames.Networking
 		public Transform UI_MessagesContentParent;
 		public GameObject UI_MessagePrefab;
 
-		public List<BoardGames.Networking.GameState> ActiveGames =
-			new List<BoardGames.Networking.GameState>();
-
 		public int Port = 50111;
 		public int PlayerTimeout = 20;
 
 		public int MaxMessages = 100;
 		public bool LogMessagesInUnity = true;
+
+
+		private List<BoardGames.Networking.GameState> activeGames =
+			new List<BoardGames.Networking.GameState>();
+		private object lock_activeGames = new object();
+		private BoardGames.Networking.GameState FindGame(ulong playerID)
+		{
+			lock (lock_activeGames)
+			{
+				foreach (var game in activeGames)
+					if (game.Player1ID == playerID || game.Player2ID == playerID)
+						return game;
+			}
+			return null;
+		}
+
+		/// <summary>
+		/// Contains every finished game,
+		///     indexed by the PlayerID of the player that hasn't been notified of it yet.
+		/// </summary>
+		private Dictionary<ulong, GameState> finishedGamesByUnacknowledgedPlayer =
+			new Dictionary<ulong, GameState>();
+		private object lock_finishedGames = new object();
 
 		private Logger logger;
 		private TcpListener networkListener = null;
@@ -222,22 +242,228 @@ namespace BoardGames.Networking
 													  BinaryReader streamReader,
 													  BinaryWriter streamWriter)
 		{
-			//TODO: Implement.
+			//Get the player with the given ID.
+			var playerData = playerMatcher.TryGetKey(msg.PlayerID);
+			if (!playerData.HasValue)
+			{
+				var failMsg = new Messages.Error("Player ID " + msg.PlayerID +
+												     " not found in matchmaking queue");
+				Try(() => Messages.Base.Write(failMsg, streamWriter),
+					"Sending error msg");
+
+				return;
+			}
+
+			//See if he has a match yet.
+			bool wasFirst;
+			var tryMatch = playerMatcher.TryPop(playerData.Value, out wasFirst);
+			if (tryMatch.HasValue)
+			{
+				var match = tryMatch.Value;
+
+				//If error occurs, we should leave the player in the queue.
+				System.Action<Exception> onFailure = e => playerMatcher.Push(playerData.Value, match);
+
+				//Tell the player he has an opponent.
+				var foundPlayerMsg = new Messages.FoundOpponent(match.Name, match.PlayerID, wasFirst);
+				if (!Try(() => Messages.Base.Write(foundPlayerMsg, streamWriter),
+						 "Sending opponent msg", onFailure))
+				{
+					return;
+				}
+
+				//If the player who asked is going first, get the board state from him.
+				if (wasFirst)
+				{
+					//Get the initial board state from the player.
+					Messages.Base _newBoardMsg = null;
+					if (!Try(() => Messages.Base.Read(streamReader), "Getting board state", onFailure))
+						return;
+
+					var newBoardMsg = _newBoardMsg as Messages.NewBoard;
+					if (newBoardMsg == null)
+					{
+						onFailure(null);
+
+						string errMsg = "Unexpected message type " + _newBoardMsg.Type + "; expected NewBoard";
+						Try(() => Messages.Base.Write(new Messages.Error(errMsg), streamWriter),
+							"Sending error msg from 'init board state'");
+
+						return;
+					}
+
+					//Record the initial game state.
+					GameState state = new GameState();
+					state.AllMoves = new List<byte[]>();
+					state.BoardState = newBoardMsg.BoardState;
+					state.MatchState = newBoardMsg.MatchState;
+					state.Player1ID = playerData.Value.PlayerID;
+					state.Player2ID = match.PlayerID;
+					lock (lock_activeGames)
+					{
+						activeGames.Add(state);
+					}
+				}
+				//Otherwise, send the game state to him.
+				else
+				{
+					var gameState = FindGame(playerData.Value.PlayerID);
+					if (gameState == null)
+					{
+						Try(() => {throw new NullReferenceException("Couldn't find game with id " + playerData.Value.PlayerID);},
+							"sending game state to player",
+							onFailure);
+						return;
+					}
+
+					//Send the game state.
+					var gameStateMsg = new Messages.GameState(gameState.BoardState,
+															  gameState.AllMoves.ToArray(),
+															  gameState.MatchState,
+															  gameState.Player1ID, gameState.Player2ID);
+					if (!Try(() => Messages.Base.Write(gameStateMsg, streamWriter),
+							"Giving game state to player", onFailure))
+					{
+						return;
+					}
+
+					//Wait for an acknowledgement.
+					Messages.Base _acknowledgeMsg = null;
+					if (!Try(() => _acknowledgeMsg = Messages.Base.Read(streamReader),
+							 "Getting acknowledgement from client in 'CheckOpponentFound'",
+							 onFailure))
+					{
+						return;
+					}
+					if (!(_acknowledgeMsg is Messages.Acknowledge))
+						onFailure(null);
+				}
+			}
+			else
+			{
+				var nullMsg = new Messages.FoundOpponent(null, ulong.MaxValue, false);
+				Try(() => Messages.Base.Write(nullMsg, streamWriter),
+					"Sending \"null opponent\" msg");
+			}
 		}
 		private void SocketHandler_GetGameState(Messages.GetGameState msg, NetworkStream stream,
 												BinaryReader streamReader, BinaryWriter streamWriter)
 		{
-			//TODO: Implement.
+			var game = FindGame(msg.PlayerID);
+			if (game == null)
+			{
+				Try(() => {throw new NullReferenceException("Couldn't find game with id " + msg.PlayerID);},
+					"sending game state to player");
+				return;
+			}
+
+			byte[][] recentMoves = new byte[game.AllMoves.Count - msg.LastKnownMovement][];
+			for (int i = 0; i < recentMoves.Length; ++i)
+				recentMoves[i] = game.AllMoves[i + msg.LastKnownMovement];
+
+			var gameMsg = new Messages.GameState(game.BoardState, recentMoves,
+												 game.MatchState, game.Player1ID, game.Player2ID);
+			if (!Try(() => Messages.Base.Write(gameMsg, streamWriter),
+					 "telling game state"))
+			{
+				return;
+			}
+
+			//If the game is over, make sure the player acknowledges that fact.
+			if (gameMsg.MatchState.IsGameOver())
+			{
+				Messages.Base _acknowledgeMsg = null;
+				if (!Try(() => _acknowledgeMsg = Messages.Base.Read(streamReader),
+					     "Getting acknowledgement from client in 'CheckOpponentFound'"))
+				{
+					return;
+				}
+				if (!(_acknowledgeMsg is Messages.Acknowledge))
+				{
+					Try(() => {throw new Exception("Expected Acknowledgement, got " + _acknowledgeMsg.Type);},
+						"casting message to acknowledgement");
+				}
+
+				//Remove the game from various data structures.
+				lock (lock_finishedGames)
+					finishedGamesByUnacknowledgedPlayer.Remove(msg.PlayerID);
+				lock (lock_activeGames)
+					activeGames.Remove(game);
+			}
 		}
 		private void SocketHandler_MakeMove(Messages.MakeMove msg, NetworkStream stream,
 											BinaryReader streamReader, BinaryWriter streamWriter)
 		{
-			//TODO: Implement.
+			//Get the game the message is referencing.
+			var game = FindGame(msg.PlayerID);
+			if (game == null)
+			{
+				Try(() => {throw new NullReferenceException("Couldn't find game with id " + msg.PlayerID);},
+					"sending game state to player");
+				return;
+			}
+
+			//Update the game.
+			//Hold onto the old game state in case something goes wrong.
+			var oldBoardState = game.BoardState;
+			var oldMatchState = game.MatchState;
+			game.BoardState = msg.NewBoardState;
+			game.AllMoves.Add(msg.Move);
+			game.MatchState = msg.NewMatchState;
+
+			//We need to let the other player know next time he checks into this server.
+			if (msg.NewMatchState.IsGameOver())
+			{
+				lock (lock_finishedGames)
+				{
+					finishedGamesByUnacknowledgedPlayer.Add(game.GetOtherPlayer(msg.PlayerID), game);
+				}
+			}
+
+			//Send an acknowledgement. If it fails, undo the changes.
+			Try(() => Messages.Base.Write(new Messages.Acknowledge(), streamWriter),
+				"sending move acknowledgement to client",
+				e =>
+				{
+					lock (lock_finishedGames)
+						finishedGamesByUnacknowledgedPlayer.Remove(game.GetOtherPlayer(msg.PlayerID));
+
+					game.BoardState = oldBoardState;
+					game.AllMoves.RemoveAt(game.AllMoves.Count - 1);
+					game.MatchState = oldMatchState;
+				});
 		}
 		private void SocketHandler_ForfeitGame(Messages.ForfeitGame msg, NetworkStream stream,
 											   BinaryReader streamReader, BinaryWriter streamWriter)
 		{
-			//TODO: Implement.
+			//TODO: Implement. Make sure to add to finishedGamesByUnacknowledgedPlayer.
+
+			//Get the game the message is referencing.
+			var game = FindGame(msg.PlayerID);
+			if (game == null)
+			{
+				Try(() => {throw new NullReferenceException("Couldn't find game with id " + msg.PlayerID);},
+					"sending game state to player");
+				return;
+			}
+
+			//End the game.
+			var oldMatchState = game.MatchState;
+			game.MatchState = (game.Player1ID == msg.PlayerID) ?
+								  MatchStates.Player2Won :
+								  MatchStates.Player1Won;
+			lock (lock_finishedGames)
+				finishedGamesByUnacknowledgedPlayer.Add(game.GetOtherPlayer(msg.PlayerID), game);
+
+			//Send an acknowledgement. If it fails, undo the changes.
+			Try(() => Messages.Base.Write(new Messages.Acknowledge(), streamWriter),
+				"sending forfeit acknowledgement to client",
+				e =>
+				{
+					lock (lock_finishedGames)
+						finishedGamesByUnacknowledgedPlayer.Remove(game.GetOtherPlayer(msg.PlayerID));
+					game.MatchState = oldMatchState;
+				});
 		}
 
 		/// <summary>
@@ -267,9 +493,22 @@ namespace BoardGames.Networking
 									  }
 								  });
 
-			writer.Write(ActiveGames.Count);
-			foreach (var game in ActiveGames)
-				game.Serialize(writer);
+			lock (lock_activeGames)
+			{
+				writer.Write(activeGames.Count);
+				foreach (var game in activeGames)
+					game.Serialize(writer);
+			}
+
+			lock (lock_finishedGames)
+			{
+				writer.Write(finishedGamesByUnacknowledgedPlayer.Count);
+				foreach (var idAndGame in finishedGamesByUnacknowledgedPlayer)
+				{
+					writer.Write(idAndGame.Key);
+					idAndGame.Value.Serialize(writer);
+				}
+			}
 		}
 		public void Deserialize(BinaryReader reader)
 		{
@@ -299,13 +538,26 @@ namespace BoardGames.Networking
 				}
 			}
 
-			ActiveGames.Clear();
-			int nGames = reader.ReadInt32();
-			for (int i = 0; i < nGames; ++i)
+			lock (lock_activeGames)
 			{
-				var game = new Networking.GameState();
-				game.Deserialize(reader);
-				ActiveGames.Add(game);
+				activeGames.Clear();
+				int nGames = reader.ReadInt32();
+				for (int i = 0; i < nGames; ++i)
+				{
+					var game = new Networking.GameState();
+					game.Deserialize(reader);
+					activeGames.Add(game);
+				}
+			}
+
+			lock (lock_finishedGames)
+			{
+				finishedGamesByUnacknowledgedPlayer.Clear();
+				int nGames = reader.ReadInt32();
+				for (int i = 0; i < nGames; ++i)
+				{
+					new Networking.GameState();
+				}
 			}
 
 			//The port may have just changed, so restart the listener just in case.
