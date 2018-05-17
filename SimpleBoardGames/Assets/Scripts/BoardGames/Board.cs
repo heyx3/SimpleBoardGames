@@ -8,7 +8,6 @@ namespace BoardGames
 	public abstract class Board<LocationType>
 		where LocationType : IEquatable<LocationType>
 	{
-		//TODO: Keep a stack of actions to undo/redo, and add UI for it.
 
 		public event System.Action<Board<LocationType>,
 								   BoardGames.Action<LocationType>> OnAction,

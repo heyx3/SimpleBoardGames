@@ -20,6 +20,8 @@ namespace BoardGames.UnityLogic.GameMode
 	public abstract class GameMode_Offline<LocationType> : GameMode<LocationType>
 		where LocationType : IEquatable<LocationType>
 	{
+		//TODO: Keep a stack of actions to undo/redo, and add UI for it.
+
 		/// <summary>
 		/// NOTE: This is the name of the game's save file,
 		///     so make sure it doesn't use any strange characters.
@@ -39,8 +41,8 @@ namespace BoardGames.UnityLogic.GameMode
 
 		private Coroutine gameEndingCoroutine = null;
 		private bool isGameEnding = false;
-		
-		
+
+
 		protected override void Awake()
 		{
 			base.Awake();

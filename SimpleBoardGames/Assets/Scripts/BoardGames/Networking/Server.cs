@@ -191,6 +191,10 @@ namespace BoardGames.Networking
 			using (var streamReader = new BinaryReader(stream))
 			using (var streamWriter = new BinaryWriter(stream))
 			{
+				//Configure the stream.
+				stream.ReadTimeout = PlayerTimeout;
+				stream.WriteTimeout = PlayerTimeout;
+
 				//Wait for a message from the client.
 				var msg = Messages.Base.Read(streamReader);
 
@@ -226,6 +230,11 @@ namespace BoardGames.Networking
 				}
 			}
 		}
+
+
+		//The below methods contain the actual client-server message-passing code.
+		//The program flow is written to line up with the messaging code in GameMode_Networked.cs.
+
 		private void SocketHandler_FindGame(Messages.FindGame msg, NetworkStream stream,
 											BinaryReader streamReader, BinaryWriter streamWriter)
 		{
@@ -277,8 +286,11 @@ namespace BoardGames.Networking
 				{
 					//Get the initial board state from the player.
 					Messages.Base _newBoardMsg = null;
-					if (!Try(() => Messages.Base.Read(streamReader), "Getting board state", onFailure))
+					if (!Try(() => _newBoardMsg = Messages.Base.Read(streamReader),
+							 "Getting board state", onFailure))
+					{
 						return;
+					}
 
 					var newBoardMsg = _newBoardMsg as Messages.NewBoard;
 					if (newBoardMsg == null)
@@ -436,8 +448,6 @@ namespace BoardGames.Networking
 		private void SocketHandler_ForfeitGame(Messages.ForfeitGame msg, NetworkStream stream,
 											   BinaryReader streamReader, BinaryWriter streamWriter)
 		{
-			//TODO: Implement. Make sure to add to finishedGamesByUnacknowledgedPlayer.
-
 			//Get the game the message is referencing.
 			var game = FindGame(msg.PlayerID);
 			if (game == null)
