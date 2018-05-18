@@ -13,6 +13,9 @@ using MatchStates = BoardGames.Networking.Messages.MatchStates;
 
 namespace BoardGames.UnityLogic.GameMode
 {
+	//TODO: the matchmaking file data is actually part of the normal game saving/loading.
+
+
 	public abstract class GameMode_Networked<LocationType> : GameMode<LocationType>
 		where LocationType : IEquatable<LocationType>
 	{
@@ -65,6 +68,8 @@ namespace BoardGames.UnityLogic.GameMode
 		public GameObject Scene_ClientUI, Scene_Game;
 
 		private Thread serverCommsThread = null;
+		private Networking.Messages.GameState serverResult_stateToLoad = null; //TODO: Check for this to not be null, then call LoadGameState().
+		private bool? serverResult_forfeited = null; //TODO: Check for this to not be null, then react.
 
 
 		protected override void Awake()
@@ -178,9 +183,19 @@ namespace BoardGames.UnityLogic.GameMode
 			return thr;
 		}
 
+		private void LoadGameState(Networking.Messages.GameState state)
+		{
+			//Load the board.
+			using (var boardStream = new MemoryStream(state.BoardState))
+			using (var boardReader = new BinaryReader(boardStream))
+				TheBoard.Deserialize(boardReader);
+
+			//TODO: Load up the rest of the match state.
+		}
+
 
 		//The below methods contain the actual client-server message-passing code.
-		//The program flow is written to line up with the messaging code in Server.cs.
+		//They are written to line up with the messaging code in Server.cs.
 
 		private void TalkToServer_FirstContact(TcpClient client, NetworkStream serverStream,
 											   BinaryWriter serverWriter, BinaryReader serverReader)
@@ -195,28 +210,15 @@ namespace BoardGames.UnityLogic.GameMode
 			}
 
 			//Check the response.
-			GameMessageBase response = null;
-			bool success = Try(() => response = GameMessageBase.Read(serverReader));
-			if (!success ||
-				(response.Type != Networking.Messages.Types.SuccessfullyInQueue &&
-				 response.Type != Networking.Messages.Types.Error))
-			{
-				clientUI.SetErrorMsg("Couldn't get/understand 'FindGame' response");
+			var queueResult = TryReadMsg<Networking.Messages.SuccessfullyInQueue>(
+							      serverReader,
+								  "getting 'FindGame' response");
+			if (queueResult == null)
 				return;
-			}
 
-			//If it's an error, give up.
-			if (response.Type == Networking.Messages.Types.Error)
-			{
-				var errMsg = (Networking.Messages.Error)response;
-				clientUI.SetErrorMsg("Server error on 'FindGame': " + errMsg.Msg);
-				return;
-			}
-
-			//Store the data from the response.
-			var matchmakingQueueData = (Networking.Messages.SuccessfullyInQueue)response;
+			//Store the result.
 			var outData = new ClientMatchmakingData((IPEndPoint)client.Client.RemoteEndPoint,
-													matchmakingQueueData.PlayerID);
+													queueResult.PlayerID);
 			SetMatchmakingData(outData);
 		}
 		private void TalkToServer_CheckMatch(TcpClient client, NetworkStream serverStream,
@@ -233,30 +235,18 @@ namespace BoardGames.UnityLogic.GameMode
 			}
 
 			//Get the response.
-			GameMessageBase response = null;
-			if (!Try(() => response = GameMessageBase.Read(serverReader)) ||
-				(response.Type != Networking.Messages.Types.FoundOpponent &&
-				 response.Type != Networking.Messages.Types.Error))
-			{
-				clientUI.SetErrorMsg("Couldn't get/understand 'CheckMatch' response");
+			var opponentInfo = TryReadMsg<Networking.Messages.FoundOpponent>(
+							       serverReader,
+								   "getting 'CheckMatch' response");
+			if (opponentInfo == null)
 				return;
-			}
-
-			//If the response is an error, give up.
-			if (response.Type == Networking.Messages.Types.Error)
-			{
-				var errMsg = (Networking.Messages.Error)response;
-				clientUI.SetErrorMsg("Server error on 'CheckMatch': " + errMsg.Msg);
-				return;
-			}
-
-			var opponentInfo = (Networking.Messages.FoundOpponent)response;
 
 			//If an opponent hasn't been found yet, check in again later.
 			if (opponentInfo.OpponentName == null)
 				return;
 
 			//If this player is going first, we need to generate the initial game board.
+			//Note that a game board has already been generated; we can just use that.
 			if (opponentInfo.AmIGoingFirst)
 			{
 				byte[] boardBytes = null;
@@ -264,7 +254,6 @@ namespace BoardGames.UnityLogic.GameMode
 				{
 					using (var boardWriter = new BinaryWriter(boardStream))
 						TheBoard.Serialize(boardWriter);
-					boardStream.Flush();
 					boardBytes = boardStream.GetBuffer();
 				}
 
@@ -279,13 +268,114 @@ namespace BoardGames.UnityLogic.GameMode
 			//Otherwise, we need to get the current game state.
 			else
 			{
-				//TODO: Implement.
+				//Get and load the state.
+				var gameState = TryReadMsg<Networking.Messages.GameState>(
+									serverReader,
+								    "getting first 'GameState'");
+				if (gameState == null)
+					return;
+				serverResult_stateToLoad = gameState;
+
+				//Acknowledge.
+				var acknowledge = new Networking.Messages.Acknowledge();
+				if (!Try(() => GameMessageBase.Write(acknowledge, serverWriter)))
+				{
+					clientUI.SetErrorMsg("Couldn't send 'Ack' after first game state");
+					return;
+				}
+
+				//Start the game UI.
+				Scene_ClientUI.SetActive(false);
+				Scene_Game.SetActive(true);
 			}
 		}
 		private void TalkToServer_GetMatchState(TcpClient client, NetworkStream serverStream,
 							  				    BinaryWriter serverWriter, BinaryReader serverReader)
 		{
-			//TODO: Implement.
+			//Send the request.
+			var matchData = GetMatchmakingData();
+			var request = new Networking.Messages.GetGameState(matchData.PlayerID,
+															   matchData.LastKnownMove);
+			if (!Try(() => GameMessageBase.Write(request, serverWriter)))
+			{
+				clientUI.SetErrorMsg("Error sending 'GetGameState' request");
+				return;
+			}
+
+			//Get the state from the server and load it.
+			var gameState = TryReadMsg<Networking.Messages.GameState>(serverReader,
+																	  "getting game state");
+			if (gameState == null)
+				return;
+			serverResult_stateToLoad = gameState;
+
+			//If the game has ended, we need to tell the server that we definitely received it.
+			if (Networking.Messages.Extensions.IsGameOver(gameState.MatchState))
+			{
+				var acknowledge = new Networking.Messages.Acknowledge();
+				if (!Try(() => GameMessageBase.Write(acknowledge, serverWriter)))
+				{
+					clientUI.SetErrorMsg("Error sending 'Ack' after game state");
+					return;
+				}
+			}
+		}
+		private void TalkToServer_MakeMove(TcpClient client, NetworkStream serverStream,
+										   BinaryWriter serverWriter, BinaryReader serverReader)
+		{
+			//TODO: How does the move get passed in here? Maybe go through with my refactoring idea.
+		}
+		private void TalkToServer_Forfeit(TcpClient client, NetworkStream serverStream,
+										  BinaryWriter serverWriter, BinaryReader serverReader)
+		{
+			var matchData = GetMatchmakingData();
+
+			//Send the request.
+			var request = new Networking.Messages.ForfeitGame(matchData.PlayerID);
+			if (!Try(() => GameMessageBase.Write(request, serverWriter)))
+			{
+				clientUI.SetErrorMsg("Error sending 'ForfeitGame' request");
+				return;
+			}
+
+			//Receive an acknowledgement.
+			var ack = TryReadMsg<Networking.Messages.Acknowledge>(serverReader,
+																  "getting 'Forfeit' ack");
+			serverResult_forfeited = (ack != null);
+		}
+
+		/// <summary>
+		/// Tries to read a message of the given type from the given stream.
+		/// If there is an error, outputs the error to the UI and returns null.
+		/// Otherwise, returns the message.
+		/// </summary>
+		/// <param name="thisAction">Used when printing an error.</param>
+		private T TryReadMsg<T>(BinaryReader reader, string thisAction)
+			where T : GameMessageBase
+		{
+			GameMessageBase message = null;
+			if (!Try(() => message = GameMessageBase.Read(reader)))
+			{
+				clientUI.SetErrorMsg("Unable to get message " + thisAction);
+				return null;
+			}
+
+			if (message.Type == Networking.Messages.Types.Error &&
+				typeof(T) != typeof(Networking.Messages.Error))
+			{
+				var errMsg = (Networking.Messages.Error)message;
+				clientUI.SetErrorMsg("Error " + thisAction + ": " + errMsg.Msg);
+				return null;
+			}
+
+			if (message.GetType() != typeof(T))
+			{
+				clientUI.SetErrorMsg("Unexpected message type " + message.GetType().Name +
+									 " " + thisAction);
+				return null;
+			}
+
+			return (T)message;
 		}
 	}
 }

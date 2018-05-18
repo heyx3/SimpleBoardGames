@@ -15,16 +15,19 @@ namespace BoardGames.UnityLogic.GameMode
 		//The opponent data is set to "null" if an opponent hasn't been found yet.
 		public string OpponentName;
 		public ulong? OpponentID;
+		public int LastKnownMove;
 
 
 		public ClientMatchmakingData(System.Net.IPEndPoint server, ulong playerID,
-									 string opponentName = null, ulong? opponentID = null)
+									 string opponentName = null, ulong? opponentID = null,
+									 int lastKnownMove = 0)
 		{
 			Server = server;
 			PlayerID = playerID;
 
 			OpponentName = opponentName;
 			OpponentID = opponentID;
+			LastKnownMove = lastKnownMove;
 		}
 
 
@@ -38,6 +41,8 @@ namespace BoardGames.UnityLogic.GameMode
 			{
 				writer.Write(OpponentName);
 				writer.Write(OpponentID.Value);
+
+				writer.Write(LastKnownMove);
 			}
 		}
 		public void Deserialize(BinaryReader reader)
@@ -49,11 +54,13 @@ namespace BoardGames.UnityLogic.GameMode
 			{
 				OpponentName = reader.ReadString();
 				OpponentID = reader.ReadUInt64();
+				LastKnownMove = reader.ReadInt32();
 			}
 			else
 			{
 				OpponentName = null;
 				OpponentID = null;
+				LastKnownMove = 0;
 			}
 		}
 	}

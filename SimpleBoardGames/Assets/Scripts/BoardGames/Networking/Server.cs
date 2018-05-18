@@ -56,10 +56,13 @@ namespace BoardGames.Networking
 		/// <summary>
 		/// Attempts an action. If an exception gets thrown,
 		///     an error will be added to "messages".
+		/// If "errMsgWriter" isn't null, the exception will also be written out
+		///     as a Messages.Error instance.
 		/// Returns whether the action succeeded without exceptions.
 		/// </summary>
 		private bool Try(Action action, string description,
-					     System.Action<Exception> onException = null)
+					     System.Action<Exception> onException = null,
+						 BinaryWriter errMsgWriter = null)
 		{
 			try
 			{
@@ -73,6 +76,15 @@ namespace BoardGames.Networking
 
 				logger.Add(Message.Error("Error " + description + ": (" +
 										     e.GetType() + ") " + e.Message));
+
+				if (errMsgWriter != null)
+				{
+					try
+					{
+						Messages.Base.Write(new Messages.Error(e.Message), errMsgWriter);
+					}
+					catch (Exception) { }
+				}
 				return false;
 			}
 		}
@@ -322,9 +334,9 @@ namespace BoardGames.Networking
 					var gameState = FindGame(playerData.Value.PlayerID);
 					if (gameState == null)
 					{
-						Try(() => {throw new NullReferenceException("Couldn't find game with id " + playerData.Value.PlayerID);},
+						Try(() => {throw new NullReferenceException("Couldn't find game with ID " + playerData.Value.PlayerID);},
 							"sending game state to player",
-							onFailure);
+							onFailure, streamWriter);
 						return;
 					}
 
@@ -364,8 +376,9 @@ namespace BoardGames.Networking
 			var game = FindGame(msg.PlayerID);
 			if (game == null)
 			{
-				Try(() => {throw new NullReferenceException("Couldn't find game with id " + msg.PlayerID);},
-					"sending game state to player");
+				var errMsg = new Messages.Error("Couldn't find game with ID " + msg.PlayerID);
+				Try(() => Messages.Base.Write(errMsg, streamWriter),
+					"sending 'unknown game ID' error");
 				return;
 			}
 
@@ -410,8 +423,9 @@ namespace BoardGames.Networking
 			var game = FindGame(msg.PlayerID);
 			if (game == null)
 			{
-				Try(() => {throw new NullReferenceException("Couldn't find game with id " + msg.PlayerID);},
-					"sending game state to player");
+				Try(() => {throw new NullReferenceException("Couldn't find game with ID " + msg.PlayerID);},
+					"sending game state to player",
+					null, streamWriter);
 				return;
 			}
 
@@ -453,7 +467,8 @@ namespace BoardGames.Networking
 			if (game == null)
 			{
 				Try(() => {throw new NullReferenceException("Couldn't find game with id " + msg.PlayerID);},
-					"sending game state to player");
+					"sending game state to player",
+					null, streamWriter);
 				return;
 			}
 
